@@ -4,7 +4,7 @@ import { Award, Users, Heart, Scale } from 'lucide-react';
 const About = () => {
   const team = [
     {
-      name: 'Dr. Giovanny GallegoPérez',
+      name: 'Dr. Giovanny Gallego',
       position: 'Socio Fundador',
       specialty: 'Especialista en Responsabilidad Civil',
       description: 'Con más de 15 años de experiencia en derecho civil, el Dr. Pérez ha liderado casos complejos de responsabilidad civil, obteniendo compensaciones millonarias para sus clientes.',
@@ -69,7 +69,7 @@ const About = () => {
                 <p>
                   Prosejurix nació en 2010 con una visión clara: brindar representación legal 
                   de excelencia a las víctimas de responsabilidad civil en Manizales y toda 
-                  la región de Caldas. Fundada por el Dr. Giovanny GallegoPérez, nuestra firma 
+                  la región de Caldas. Fundada por el Dr. Giovanny Gallego, nuestra firma 
                   ha crecido hasta convertirse en un referente regional.
                 </p>
                 <p>
