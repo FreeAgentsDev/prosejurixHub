@@ -107,9 +107,9 @@ const Home = () => {
             </div>
             <div className="hidden lg:block">
               <img 
-                src="/prosejurix.png" 
+                src="/prosejurix-rounded.png" 
                 alt="Prosejurix Logo" 
-                className="w-full max-w-md mx-auto opacity-90"
+                className="w-full max-w-lg mx-auto opacity-90"
               />
             </div>
           </div>

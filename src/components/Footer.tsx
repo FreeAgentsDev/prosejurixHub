@@ -11,9 +11,9 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
               <img 
-                src="/prosejurix.png" 
+                src="/prosejurix-rounded.png" 
                 alt="Prosejurix Logo" 
-                className="h-10 w-10"
+                className="h-20"
               />
               <div>
                 <h3 className="text-xl font-bold">Prosejurix</h3>

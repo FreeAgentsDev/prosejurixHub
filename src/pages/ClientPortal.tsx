@@ -57,9 +57,9 @@ const ClientPortal = () => {
           <div className="text-center">
             <Link to="/" className="inline-block mb-8">
               <img 
-                src="/prosejurix.png" 
+                src="/prosejurix-rounded.png" 
                 alt="Prosejurix Logo" 
-                className="h-16 w-16 mx-auto"
+                className="h-20 mx-auto"
               />
             </Link>
             <h2 className="text-3xl font-bold text-slate-900 mb-2">Portal del Cliente</h2>
@@ -157,7 +157,7 @@ const ClientPortal = () => {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
               <img 
-                src="/prosejurix.png" 
+                src="/prosejurix-rounded.png" 
                 alt="Prosejurix Logo" 
                 className="h-10 w-10"
               />

@@ -136,9 +136,9 @@ const AdminPanel = () => {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
               <img 
-                src="/prosejurix.png" 
+                src="/prosejurix-rounded.png" 
                 alt="Prosejurix Logo" 
-                className="h-10 w-10"
+                className="h-20"
               />
               <div>
                 <h1 className="text-xl font-bold text-slate-900">Panel Administrativo</h1>
