@@ -19,7 +19,7 @@ const Procesos = () => {
   const [editingItem, setEditingItem] = useState<any>(null);
 
   // Usar hook personalizado para gestionar procesos
-  const { procesos, createProcess, updateProcess, deleteProcess, isLoaded, error } = useProcesses();
+  const { procesos, procesosRaw, createProcess, updateProcess, deleteProcess, isLoaded, error } = useProcesses();
   const clientes = mockClientes;
 
   // Estadísticas
@@ -88,13 +88,29 @@ const Procesos = () => {
   };
 
   const handleView = (proceso: any) => {
+    // Obtener el ID del proceso desde diferentes posibles campos
+    // Priorizar proceso_id (ID del proceso) sobre otros campos
+    const procId = proceso.proceso_id || proceso.procesoId || proceso.proceso_ID || 
+                  proceso.id || proceso.ID || proceso.Id || 
+                  `PROC-${proceso.ID || proceso.id || 'N/A'}`;
+    
+    console.log('🔍 Navegando a detalles con ID:', procId, 'Proceso completo:', proceso);
+    
     // Ir a la página de detalle en modo solo lectura
-    navigate(`/admin/procesos/${proceso.id}?mode=view`);
+    navigate(`/admin/procesos/${encodeURIComponent(String(procId))}?mode=view`);
   };
 
   const handleEdit = (proceso: any) => {
+    // Obtener el ID del proceso desde diferentes posibles campos
+    // Priorizar proceso_id (ID del proceso) sobre otros campos
+    const procId = proceso.proceso_id || proceso.procesoId || proceso.proceso_ID || 
+                  proceso.id || proceso.ID || proceso.Id || 
+                  `PROC-${proceso.ID || proceso.id || 'N/A'}`;
+    
+    console.log('🔍 Navegando a edición con ID:', procId, 'Proceso completo:', proceso);
+    
     // Ir a la página de detalle en modo edición
-    navigate(`/admin/procesos/${proceso.id}?mode=edit`);
+    navigate(`/admin/procesos/${encodeURIComponent(String(procId))}?mode=edit`);
   };
 
   const handleDelete = async (id: string | number) => {
@@ -359,6 +375,35 @@ const Procesos = () => {
                     demandado: p.demandado,
                     codigoAcceso: p.codigoAcceso
                   }))}
+                  procesosRaw={procesosRaw && procesosRaw.length > 0 ? procesosRaw.filter((p: any) => {
+                    // Filtrar los datos crudos usando los mismos filtros que se aplicaron a filteredProcesos
+                    const procId = p.id || p.ID || p.Id || p.proceso_id || p.procesoId;
+                    const procIdStr = String(procId);
+                    
+                    // Aplicar filtro de búsqueda
+                    if (searchTerm) {
+                      const term = searchTerm.toLowerCase();
+                      const nombre = (p.NOMBRE || p.nombre || p.cliente_nombre || '').toLowerCase();
+                      const id = procIdStr.toLowerCase();
+                      if (!id.includes(term) && !nombre.includes(term)) {
+                        return false;
+                      }
+                    }
+                    
+                    // Aplicar filtro de estado si existe
+                    if (filterEstado) {
+                      const estado = (p.estado || p.Estado || p.estado_publico || '').toLowerCase();
+                      if (filterEstado === 'negociacion') {
+                        if (!estado.includes('negociación') && !estado.includes('negociacion')) {
+                          return false;
+                        }
+                      } else if (estado !== filterEstado) {
+                        return false;
+                      }
+                    }
+                    
+                    return true;
+                  }) : undefined}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onView={handleView}

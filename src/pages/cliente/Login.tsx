@@ -13,11 +13,11 @@ const ClienteLogin = () => {
         alert('Error de conexión. Por favor, verifica la configuración e intente más tarde.');
         return;
       }
-      // Validar y normalizar ID (basado en el CSV, el campo ID es numérico)
-      const procesoId = Number(String(clienteIdInput).trim());
+      // Validar y normalizar ID del cliente (cliente_id en la tabla CTRANTECEDENTES)
+      const clienteId = Number(String(clienteIdInput).trim());
 
-      if (!procesoId || Number.isNaN(procesoId)) {
-        alert('Por favor ingresa un ID válido (número).');
+      if (!clienteId || Number.isNaN(clienteId)) {
+        alert('Por favor ingresa un ID de cliente válido (número).');
         return;
       }
 
@@ -43,60 +43,65 @@ const ClienteLogin = () => {
         return;
       }
 
-      // Si tenemos datos de muestra, identificar el nombre correcto de la columna ID
-      let idColumnName: string | null = null;
+      // Si tenemos datos de muestra, identificar el nombre correcto de la columna cliente_id
+      let clienteIdColumnName: string | null = null;
       if (sampleData && sampleData.length > 0) {
         const columnas = Object.keys(sampleData[0]);
         console.log('📋 Columnas disponibles en la tabla:', columnas);
         
-        // Buscar el nombre de la columna ID (puede estar en diferentes formatos)
-        const posiblesNombresId = ['ID', 'id', 'Id', 'iD', 'Id', 'ID_'];
-        idColumnName = posiblesNombresId.find(name => columnas.includes(name)) || 
-                       columnas.find(col => col.toLowerCase() === 'id') || null;
+        // Buscar el nombre de la columna cliente_id (puede estar en diferentes formatos)
+        const posiblesNombresClienteId = [
+          'cliente_id', 'clienteId', 'CLIENTE_ID', 'Cliente_ID',
+          'clienteId', 'CLIENTEID', 'id_cliente', 'ID_CLIENTE'
+        ];
+        clienteIdColumnName = posiblesNombresClienteId.find(name => 
+          columnas.includes(name) || 
+          columnas.some(col => col.toLowerCase().replace(/\s+/g, '_') === name.toLowerCase().replace(/\s+/g, '_'))
+        ) || columnas.find(col => 
+          col.toLowerCase().includes('cliente') && col.toLowerCase().includes('id')
+        ) || null;
         
-        if (!idColumnName) {
-          // Si no encontramos ID, mostrar las columnas disponibles
-          console.warn('⚠️ No se encontró columna ID. Columnas disponibles:', columnas);
-          alert(`No se encontró columna ID en la tabla. Columnas disponibles: ${columnas.slice(0, 10).join(', ')}${columnas.length > 10 ? '...' : ''}`);
+        if (!clienteIdColumnName) {
+          // Si no encontramos cliente_id, mostrar las columnas disponibles
+          console.warn('⚠️ No se encontró columna cliente_id. Columnas disponibles:', columnas);
+          alert(`No se encontró columna cliente_id en la tabla. Columnas disponibles: ${columnas.slice(0, 10).join(', ')}${columnas.length > 10 ? '...' : ''}`);
           return;
         }
         
-        console.log(`✅ Columna ID encontrada: "${idColumnName}"`);
+        console.log(`✅ Columna cliente_id encontrada: "${clienteIdColumnName}"`);
       } else {
         // Si no hay datos, intentar con nombres comunes
-        idColumnName = 'id';
-        console.log('⚠️ Tabla vacía, usando nombre de columna por defecto: "id"');
+        clienteIdColumnName = 'cliente_id';
+        console.log('⚠️ Tabla vacía, usando nombre de columna por defecto: "cliente_id"');
       }
       
-      // Ahora buscar el proceso por ID
-      console.log('🔎 Buscando proceso...', { tableName, idColumn: idColumnName, procesoId });
+      // Buscar todos los procesos del cliente por cliente_id
+      console.log('🔎 Buscando procesos del cliente...', { tableName, clienteIdColumn: clienteIdColumnName, clienteId });
       const { data: procesosCliente, error: queryError } = await supabase
         .from(tableName)
         .select('*')
-        .eq(idColumnName, procesoId);
+        .eq(clienteIdColumnName, clienteId);
       
       if (queryError) {
         console.error('❌ Error en la consulta:', queryError);
-        alert(`Error al buscar el proceso: ${queryError.message || 'Error desconocido'}`);
+        alert(`Error al buscar los procesos del cliente: ${queryError.message || 'Error desconocido'}`);
         return;
       }
 
       if (!procesosCliente || procesosCliente.length === 0) {
-        console.warn(`⚠️ No se encontró un proceso con ID ${procesoId}`);
-        alert(`No se encontró un proceso con ID ${procesoId}. Verifica el ID e intenta nuevamente.`);
+        console.warn(`⚠️ No se encontraron procesos para el cliente con ID ${clienteId}`);
+        alert(`No se encontraron procesos para el cliente con ID ${clienteId}. Verifica el ID e intenta nuevamente.`);
         return;
       }
 
-      const procesoEncontrado = procesosCliente[0];
-      console.log(`✅ Proceso encontrado con ID ${procesoId}:`, procesoEncontrado);
-      console.log('📊 Datos del proceso:', {
-        id: procesoEncontrado[idColumnName!],
-        columnas: Object.keys(procesoEncontrado),
-        totalColumnas: Object.keys(procesoEncontrado).length
-      });
+      console.log(`✅ Procesos encontrados para el cliente ${clienteId}: ${procesosCliente.length}`);
+      console.log('📊 Procesos encontrados:', procesosCliente);
 
+      // Obtener información del cliente del primer proceso
+      const primerProceso = procesosCliente[0];
+      const columnas = Object.keys(primerProceso);
+      
       // Identificar el nombre de la columna de cédula/NIT
-      const columnas = Object.keys(procesoEncontrado);
       const posiblesNombresCedula = [
         'CÉDULA / NIT',
         'CÉDULA_NIT',
@@ -121,67 +126,16 @@ const ClienteLogin = () => {
         col.toLowerCase().includes('cédula')
       ) || null;
 
-      if (!cedulaColumnName) {
-        console.warn('⚠️ No se encontró columna de cédula/NIT. Columnas disponibles:', columnas);
-        alert(`No se encontró columna de cédula/NIT. Columnas disponibles: ${columnas.slice(0, 10).join(', ')}${columnas.length > 10 ? '...' : ''}`);
-        return;
-      }
+      const cedula = cedulaColumnName ? primerProceso[cedulaColumnName] : '';
 
-      // Obtener la cédula del proceso encontrado
-      const cedula = procesoEncontrado[cedulaColumnName];
-      
-      if (!cedula) {
-        console.warn('⚠️ El proceso no tiene cédula asignada');
-        alert('El proceso encontrado no tiene cédula asignada. No se pueden buscar más procesos.');
-        return;
-      }
-
-      console.log(`🔍 Cédula encontrada: "${cedula}" en columna "${cedulaColumnName}"`);
-      console.log('🔎 Buscando todos los procesos con la misma cédula...');
-
-      // Normalizar la cédula para búsqueda (eliminar puntos, guiones, espacios)
-      const normalizarCedula = (ced: string): string => {
-        return String(ced)
-          .trim()
-          .replace(/\./g, '')
-          .replace(/-/g, '')
-          .replace(/\s+/g, '');
-      };
-
-      const cedulaNormalizada = normalizarCedula(cedula);
-
-      // Buscar todos los procesos con la misma cédula
-      const { data: todosLosProcesos, error: errorCedula } = await supabase
-        .from(tableName)
-        .select('*');
-
-      if (errorCedula) {
-        console.error('❌ Error al obtener todos los procesos:', errorCedula);
-        alert(`Error al buscar procesos por cédula: ${errorCedula.message || 'Error desconocido'}`);
-        return;
-      }
-
-      // Filtrar procesos que coincidan con la cédula (normalizada)
-      const procesosConMismaCedula = (todosLosProcesos || []).filter((proc: any) => {
-        const cedulaProc = proc[cedulaColumnName];
-        if (!cedulaProc) return false;
-        const cedulaProcNormalizada = normalizarCedula(cedulaProc);
-        return cedulaProcNormalizada === cedulaNormalizada;
-      });
-
-      console.log(`✅ Procesos encontrados con la misma cédula: ${procesosConMismaCedula.length}`);
-      console.log('📋 IDs de procesos encontrados:', procesosConMismaCedula.map((p: any) => p[idColumnName!]));
-
-      if (procesosConMismaCedula.length === 0) {
-        alert('No se encontraron otros procesos con la misma cédula.');
-        return;
-      }
+      console.log(`✅ Procesos encontrados para el cliente: ${procesosCliente.length}`);
+      console.log('📋 IDs de procesos encontrados:', procesosCliente.map((p: any) => p.proceso_id || p.procesoId || p.ID || p.id));
 
       navigate('/portal/proceso', {
         state: { 
-          clienteId: procesoId,
-          cedula: cedula,
-          procesos: procesosConMismaCedula
+          clienteId: clienteId,
+          cedula: cedula || '',
+          procesos: procesosCliente
         }
       });
     } catch (error) {

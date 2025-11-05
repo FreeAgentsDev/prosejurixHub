@@ -3,6 +3,7 @@ import { mockProcesos, MockProceso } from '../data/mocks';
 import { supabase } from '../lib/supabase';
 import { ControlProcesoAntecedente } from '../types/supabase';
 import * as api from '../services/api';
+import { detectTableAndIdType, TableInfo } from '../lib/supabaseInspector';
 
 // Función helper para obtener un valor de un objeto usando múltiples posibles nombres de claves
 const getValue = (obj: any, ...keys: string[]): any => {
@@ -68,61 +69,23 @@ export const transformSupabaseToMock = (data: any): MockProceso => {
 // Hook para gestionar procesos con Supabase
 export const useProcesses = () => {
   const [procesos, setProcesos] = useState<MockProceso[]>([]);
+  const [procesosRaw, setProcesosRaw] = useState<any[]>([]); // Datos crudos de Supabase
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tableName, setTableName] = useState<string | null>(null);
+  const [tableInfo, setTableInfo] = useState<TableInfo | null>(null);
 
-  // Función para encontrar el nombre correcto de la tabla
-  const findTableName = async (): Promise<string> => {
-    if (!supabase) {
-      throw new Error('Cliente de Supabase no inicializado. Verifica tu archivo .env');
-    }
-
-    // En PostgREST (usado por Supabase), intentamos diferentes variaciones del nombre de tabla
-    const tableNames = [
-      'CTRANTECEDENTES',           // Nombre actual de la tabla
-      'ctrantecedentes',           // Minúsculas
-      'CTR_ANTECEDENTES',          // Con guión bajo
-      'ctr_antecedentes',          // Con guión bajo minúsculas
-      'CtrAntecedentes',           // Camel case
-    ];
-
-    console.log('🔍 Probando diferentes nombres de tabla...');
+  // Detectar tabla y tipo de ID una sola vez
+  const detectTableInfo = async (): Promise<TableInfo> => {
+    if (tableInfo) return tableInfo;
     
-    for (const name of tableNames) {
-      try {
-        const { error: testError, data } = await supabase
-          .from(name.replace(/"/g, '')) // Remover comillas para la consulta (Supabase las maneja internamente)
-          .select('id')
-          .limit(1);
-        
-        if (!testError) {
-          console.log(`✅ Nombre de tabla correcto encontrado: "${name}"`);
-          // Retornar sin comillas dobles ya que Supabase las maneja internamente
-          return name.replace(/"/g, '');
-        } else {
-          // Solo loggear si no es un error de tabla no encontrada
-          if (!testError.message?.includes('relation') && !testError.message?.includes('does not exist')) {
-            console.log(`⚠️ Probando "${name}": Error: ${testError.message}`);
-          }
-        }
-      } catch (err) {
-        console.log(`⚠️ Error al probar "${name}":`, err);
-      }
+    try {
+      const info = await detectTableAndIdType();
+      setTableInfo(info);
+      return info;
+    } catch (err) {
+      console.error('❌ Error al detectar información de la tabla:', err);
+      throw err;
     }
-
-    // Si ninguna funciona, mostrar todos los errores y retornar el primero por defecto
-    console.warn('⚠️ No se encontró un nombre de tabla válido. Se usará el nombre por defecto.');
-    console.warn('💡 Asegúrate de que la tabla existe en Supabase y tiene el nombre correcto.');
-    return tableNames[0].replace(/"/g, '');
-  };
-
-  // Helper para obtener el nombre de tabla (usa el encontrado o busca uno nuevo)
-  const getTableName = async (): Promise<string> => {
-    if (tableName) return tableName;
-    const found = await findTableName();
-    setTableName(found);
-    return found;
   };
 
   // Función helper para ordenar los datos usando las columnas reales
@@ -188,16 +151,15 @@ export const useProcesses = () => {
 
         console.log('✓ Cliente de Supabase inicializado correctamente');
 
-        // Encontrar el nombre correcto de la tabla
-        console.log('🔍 Buscando nombre correcto de la tabla...');
-        const correctTableName = await findTableName();
-        setTableName(correctTableName);
-        console.log(`✓ Usando tabla: "${correctTableName}"`);
+        // Detectar tabla y tipo de ID
+        console.log('🔍 Detectando tabla y tipo de ID...');
+        const info = await detectTableInfo();
+        console.log(`✓ Tabla: "${info.tableName}", Columna ID: "${info.idColumnName}" (tipo: ${info.idType})`);
 
         // Obtener los datos SIN ordenamiento primero para evitar errores de columnas
         console.log('📥 Obteniendo datos de Supabase...');
         const { data: rawData, error: supabaseError } = await supabase
-          .from(correctTableName)
+          .from(info.tableName)
           .select('*');
 
         if (supabaseError) {
@@ -209,14 +171,14 @@ export const useProcesses = () => {
 
           // Mejorar mensaje de error si la tabla no existe o columnas incorrectas
           if (supabaseError.message?.includes('relation') || supabaseError.message?.includes('does not exist')) {
-            throw new Error(`Tabla "CTRANTECEDENTES" no encontrada. Verifica el nombre de la tabla en Supabase. Error: ${supabaseError.message}`);
+            throw new Error(`Tabla "${info.tableName}" no encontrada. Verifica el nombre de la tabla en Supabase. Error: ${supabaseError.message}`);
           }
           if (supabaseError.message?.includes('column') && supabaseError.message?.includes('does not exist')) {
             // El error es de columnas, no de la tabla - aún podemos trabajar con los datos
             console.warn('⚠️ Advertencia sobre columnas:', supabaseError.message);
             // Intentar obtener datos sin ordenamiento
             const { data: fallbackData } = await supabase
-              .from(correctTableName)
+              .from(info.tableName)
               .select('*');
             if (fallbackData) {
               const data = sortDataByClient(fallbackData);
@@ -247,6 +209,8 @@ export const useProcesses = () => {
         const data = sortDataByClient(rawData || []);
 
         if (data && data.length > 0) {
+          // Guardar datos crudos de Supabase
+          setProcesosRaw(data);
           // Transformar los datos de Supabase al formato esperado
           const transformedProcesses = data.map(transformSupabaseToMock);
           console.log(`✅ ${transformedProcesses.length} procesos transformados y listos para mostrar`);
@@ -255,6 +219,7 @@ export const useProcesses = () => {
           // Si no hay datos en Supabase, mostrar mensaje pero no usar mocks
           console.warn('⚠️ La tabla está vacía. No hay procesos registrados en Supabase.');
           setProcesos([]);
+          setProcesosRaw([]);
           setError('La tabla de procesos está vacía. Crea tu primer proceso para comenzar.');
         }
       } catch (err) {
@@ -359,17 +324,19 @@ export const useProcesses = () => {
       
       // Si el ID es un string como "PROC-123", necesitamos buscar el ID numérico
       if (id.startsWith('PROC-')) {
-        // Buscar en Supabase para obtener el ID numérico
+        // Buscar en Supabase para obtener el ID numérico usando el tipo correcto
         if (supabase) {
-          const tblName = await getTableName();
-          const { data: foundData } = await supabase
-            .from(tblName)
-            .select('id')
-            .eq('proceso_id', id)
-            .single();
+          const info = await detectTableInfo();
           
-          if (foundData?.id) {
-            dbId = foundData.id;
+          // Buscar por proceso_id para obtener el id numérico
+          const { data: foundData } = await supabase
+            .from(info.tableName)
+            .select(info.idColumnName)
+            .eq('proceso_id', id)
+            .maybeSingle();
+          
+          if (foundData && foundData[info.idColumnName] !== undefined) {
+            dbId = foundData[info.idColumnName];
           }
         }
       }
@@ -394,17 +361,19 @@ export const useProcesses = () => {
       
       // Si el ID es un string como "PROC-123", necesitamos buscar el ID numérico
       if (id.startsWith('PROC-')) {
-        // Buscar en Supabase para obtener el ID numérico
+        // Buscar en Supabase para obtener el ID numérico usando el tipo correcto
         if (supabase) {
-          const tblName = await getTableName();
-          const { data: foundData } = await supabase
-            .from(tblName)
-            .select('id')
-            .eq('proceso_id', id)
-            .single();
+          const info = await detectTableInfo();
           
-          if (foundData?.id) {
-            dbId = foundData.id;
+          // Buscar por proceso_id para obtener el id numérico
+          const { data: foundData } = await supabase
+            .from(info.tableName)
+            .select(info.idColumnName)
+            .eq('proceso_id', id)
+            .maybeSingle();
+          
+          if (foundData && foundData[info.idColumnName] !== undefined) {
+            dbId = foundData[info.idColumnName];
           } else {
             throw new Error('No se encontró el proceso en la base de datos');
           }
@@ -437,16 +406,21 @@ export const useProcesses = () => {
     }
 
     try {
-      const tblName = await getTableName();
+      const info = await detectTableInfo();
       const { data, error: supabaseError } = await supabase
-        .from(tblName)
+        .from(info.tableName)
         .select('*');
 
       if (supabaseError) throw supabaseError;
 
       if (data && data.length > 0) {
         const sortedData = sortDataByClient(data);
+        // Guardar datos crudos de Supabase
+        setProcesosRaw(sortedData);
         setProcesos(sortedData.map(transformSupabaseToMock));
+      } else {
+        setProcesosRaw([]);
+        setProcesos([]);
       }
     } catch (err) {
       console.error('Error al refrescar procesos:', err);
@@ -455,6 +429,7 @@ export const useProcesses = () => {
 
   return {
     procesos,
+    procesosRaw, // Datos crudos de Supabase
     isLoaded,
     error,
     createProcess,

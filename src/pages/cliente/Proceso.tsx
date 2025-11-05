@@ -31,8 +31,10 @@ const ClienteProceso = () => {
 
   // Transformar procesos de Supabase para el componente (mapeando campos del CSV)
   const procesosFormateados = procesos.map((proc: any) => {
-    // Buscar ID con diferentes posibles nombres
-    const procId = proc.ID || proc.id || proc.Id || proc.proceso_id || `PROC-${proc.ID || 'N/A'}`;
+    // Priorizar proceso_id (ID del proceso) sobre otros campos
+    const procId = proc.proceso_id || proc.procesoId || proc['PROCESO_ID'] || 
+                   proc.ID || proc.id || proc.Id || 
+                   `PROC-${proc.ID || proc.id || 'N/A'}`;
     
     // Buscar estado con diferentes posibles nombres
     const estado = proc.Estado || proc.estado || proc.ESTADO || proc.estado_publico || 'Sin estado';
@@ -53,7 +55,8 @@ const ClienteProceso = () => {
                          'Sin observaciones disponibles.';
 
     return {
-      id: String(procId),
+      id: String(procId), // ID del proceso (proceso_id)
+      procesoId: String(procId), // Guardar también como procesoId para búsquedas
       estado: String(estado),
       observaciones: String(observaciones),
       fechaIngreso: String(fecha),
@@ -73,6 +76,7 @@ const ClienteProceso = () => {
       clientName={clienteNombre}
       clientCedula={clienteCedula}
       onLogout={handleLogout}
+      procesosRaw={procesos}
     />
   );
 };

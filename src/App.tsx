@@ -10,6 +10,7 @@ import Blog from './pages/Blog';
 import Contact from './pages/Contact';
 import ClienteLogin from './pages/cliente/Login';
 import ClienteProceso from './pages/cliente/Proceso';
+import ProcesoDetalleCliente from './pages/cliente/ProcesoDetalle';
 import AdminLogin from './pages/admin/Login';
 import Dashboard from './pages/admin/Dashboard';
 import Procesos from './pages/admin/Procesos';
@@ -29,6 +30,7 @@ function App() {
           {/* Client portal without header/footer */}
           <Route path="/portal" element={<ClienteLogin />} />
           <Route path="/portal/proceso" element={<ClienteProceso />} />
+          <Route path="/portal/proceso/:id" element={<ProcesoDetalleCliente />} />
           
           {/* Main website routes with header/footer */}
           <Route path="/*" element={

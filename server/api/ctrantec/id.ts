@@ -24,6 +24,33 @@ const validateId = (id: string): { isValid: boolean; parsedId?: number; error?: 
 };
 
 /**
+ * Buscar registro por ID numérico o proceso_id
+ * Retorna el registro encontrado o null si no existe
+ */
+const findRecordByIdOrProcesoId = async (id: string): Promise<{ data: any; error: any }> => {
+  const decodedId = decodeURIComponent(id);
+  const idValidation = validateId(decodedId);
+  
+  if (idValidation.isValid) {
+    // Buscar por ID numérico
+    const result = await supabaseAdmin
+      .from('CTRANTECEDENTES')
+      .select('*')
+      .eq('id', idValidation.parsedId)
+      .maybeSingle();
+    return result;
+  } else {
+    // Buscar por proceso_id
+    const result = await supabaseAdmin
+      .from('CTRANTECEDENTES')
+      .select('*')
+      .eq('proceso_id', decodedId)
+      .maybeSingle();
+    return result;
+  }
+};
+
+/**
  * Validar campos del payload (mismo que en index.ts)
  */
 const validatePayload = (data: any): { isValid: boolean; errors: string[] } => {
@@ -87,34 +114,52 @@ const validatePayload = (data: any): { isValid: boolean; errors: string[] } => {
 
 /**
  * GET /api/ctrantec/:id
- * Obtener un registro por ID
+ * Obtener un registro por ID (numérico) o proceso_id (string)
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log(`🔍 Buscando registro con ID: ${id}`);
 
-    // Validar ID
-    const idValidation = validateId(id);
-    if (!idValidation.isValid) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: idValidation.error,
-      });
+    // Decodificar el ID si viene codificado
+    const decodedId = decodeURIComponent(id);
+    
+    // Intentar validar como ID numérico primero
+    const idValidation = validateId(decodedId);
+    let data = null;
+    let error = null;
+
+    if (idValidation.isValid) {
+      // Buscar por ID numérico
+      console.log(`📡 Buscando por id numérico: ${idValidation.parsedId}`);
+      const result = await supabaseAdmin
+        .from('CTRANTECEDENTES')
+        .select('*')
+        .eq('id', idValidation.parsedId)
+        .maybeSingle();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // Si no es un ID numérico válido, buscar por proceso_id
+      console.log(`📡 Buscando por proceso_id: ${decodedId}`);
+      const result = await supabaseAdmin
+        .from('CTRANTECEDENTES')
+        .select('*')
+        .eq('proceso_id', decodedId)
+        .maybeSingle();
+      
+      data = result.data;
+      error = result.error;
     }
-
-    // Buscar registro
-    const { data, error } = await supabaseAdmin
-      .from('CTRANTECEDENTES')
-      .select('*')
-      .eq('id', idValidation.parsedId)
-      .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
         // No se encontró el registro
+        console.log(`⚠️ No se encontró registro con ID/proceso_id: ${decodedId}`);
         return res.status(404).json({
           error: 'Not Found',
-          message: `No se encontró un registro con ID ${id}`,
+          message: `No se encontró un registro con ID o proceso_id: ${decodedId}`,
         });
       }
 
@@ -125,6 +170,15 @@ router.get('/:id', async (req: Request, res: Response) => {
       });
     }
 
+    if (!data) {
+      console.log(`⚠️ No se encontró registro con ID/proceso_id: ${decodedId}`);
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `No se encontró un registro con ID o proceso_id: ${decodedId}`,
+      });
+    }
+
+    console.log(`✅ Registro encontrado: ${data.id || data.proceso_id}`);
     return res.status(200).json({ data });
   } catch (err) {
     console.error('❌ Error inesperado en GET /api/ctrantec/:id:', err);
@@ -137,21 +191,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 /**
  * PUT /api/ctrantec/:id
- * Actualizar un registro
+ * Actualizar un registro por ID (numérico) o proceso_id (string)
  */
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const body = req.body;
-
-    // Validar ID
-    const idValidation = validateId(id);
-    if (!idValidation.isValid) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: idValidation.error,
-      });
-    }
+    console.log(`🔍 Actualizando registro con ID: ${id}`);
 
     // Validar que el body no esté vacío
     if (!body || Object.keys(body).length === 0) {
@@ -179,17 +225,14 @@ router.put('/:id', async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar que el registro existe
-    const { data: existingRecord, error: checkError } = await supabaseAdmin
-      .from('CTRANTECEDENTES')
-      .select('id')
-      .eq('id', idValidation.parsedId)
-      .single();
+    // Buscar el registro existente (por ID numérico o proceso_id)
+    const { data: existingRecord, error: checkError } = await findRecordByIdOrProcesoId(id);
 
     if (checkError || !existingRecord) {
+      console.log(`⚠️ No se encontró registro con ID/proceso_id: ${id}`);
       return res.status(404).json({
         error: 'Not Found',
-        message: `No se encontró un registro con ID ${id}`,
+        message: `No se encontró un registro con ID o proceso_id: ${id}`,
       });
     }
 
@@ -209,11 +252,11 @@ router.put('/:id', async (req: Request, res: Response) => {
     // Agregar timestamp de actualización
     dataToUpdate.updated_at = new Date().toISOString();
 
-    // Actualizar en la base de datos
+    // Actualizar en la base de datos usando el ID numérico del registro encontrado
     const { data, error } = await supabaseAdmin
       .from('CTRANTECEDENTES')
       .update(dataToUpdate)
-      .eq('id', idValidation.parsedId)
+      .eq('id', existingRecord.id)
       .select()
       .single();
 
@@ -261,40 +304,29 @@ router.put('/:id', async (req: Request, res: Response) => {
 
 /**
  * DELETE /api/ctrantec/:id
- * Eliminar un registro
+ * Eliminar un registro por ID (numérico) o proceso_id (string)
  */
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log(`🔍 Eliminando registro con ID: ${id}`);
 
-    // Validar ID
-    const idValidation = validateId(id);
-    if (!idValidation.isValid) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: idValidation.error,
-      });
-    }
-
-    // Verificar que el registro existe antes de eliminar
-    const { data: existingRecord, error: checkError } = await supabaseAdmin
-      .from('CTRANTECEDENTES')
-      .select('id')
-      .eq('id', idValidation.parsedId)
-      .single();
+    // Buscar el registro existente (por ID numérico o proceso_id)
+    const { data: existingRecord, error: checkError } = await findRecordByIdOrProcesoId(id);
 
     if (checkError || !existingRecord) {
+      console.log(`⚠️ No se encontró registro con ID/proceso_id: ${id}`);
       return res.status(404).json({
         error: 'Not Found',
-        message: `No se encontró un registro con ID ${id}`,
+        message: `No se encontró un registro con ID o proceso_id: ${id}`,
       });
     }
 
-    // Eliminar registro
+    // Eliminar registro usando el ID numérico del registro encontrado
     const { data, error } = await supabaseAdmin
       .from('CTRANTECEDENTES')
       .delete()
-      .eq('id', idValidation.parsedId)
+      .eq('id', existingRecord.id)
       .select()
       .single();
 

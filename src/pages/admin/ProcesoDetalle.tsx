@@ -9,6 +9,7 @@ import * as api from '../../services/api';
 import { transformSupabaseToMock } from '../../hooks/useProcesses';
 import { ControlProcesoAntecedente } from '../../types/supabase';
 import { supabase } from '../../lib/supabase';
+import { detectTableAndIdType } from '../../lib/supabaseInspector';
 
 const ProcesoDetalle = () => {
   const { id } = useParams();
@@ -23,7 +24,17 @@ const ProcesoDetalle = () => {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(mode === 'edit');
 
-  // Cargar proceso completo desde la API
+  // Función helper para obtener valores de diferentes posibles nombres de columna
+  const getValue = (obj: any, ...keys: string[]): any => {
+    for (const key of keys) {
+      if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
+        return obj[key];
+      }
+    }
+    return null;
+  };
+
+  // Cargar proceso completo desde Supabase por ID
   useEffect(() => {
     const loadProcess = async () => {
       if (!id) {
@@ -31,42 +42,124 @@ const ProcesoDetalle = () => {
         return;
       }
 
+      // Validar ID antes de procesar
+      if (id.trim().length < 1) {
+        setError('ID inválido: El ID no puede estar vacío');
+        setIsLoading(false);
+        return;
+      }
+
+      // Decodificar el ID si viene codificado en la URL
+      const decodedId = decodeURIComponent(id);
+      console.log('🔍 Buscando proceso con ID:', decodedId);
+
       setIsLoading(true);
       setError(null);
 
       try {
-        // Primero necesitamos obtener el ID numérico de la base de datos
-        let dbId: number | string = id;
-        
-        // Si el ID es un string como "PROC-123", necesitamos buscar el ID numérico
-        if (id.startsWith('PROC-') && supabase) {
-          const { data: foundData } = await supabase
-            .from('CTRANTECEDENTES')
-            .select('id')
-            .eq('proceso_id', id)
-            .single();
+        let procesoData = null;
+
+        // Primero intentar buscar directamente en Supabase por ID
+        if (supabase) {
+          // Detectar tabla y tipo de ID
+          const tableInfo = await detectTableAndIdType();
+          console.log('📡 Buscando en Supabase por proceso_id:', decodedId);
           
-          if (foundData?.id) {
-            dbId = foundData.id;
+          // Prioridad 1: Buscar por proceso_id (si existe)
+          const { data: foundByProcesoId, error: errorProcesoId } = await supabase
+            .from(tableInfo.tableName)
+            .select('*')
+            .eq('proceso_id', decodedId)
+            .maybeSingle();
+          
+          if (foundByProcesoId && !errorProcesoId) {
+            console.log('✅ Proceso encontrado por proceso_id:', foundByProcesoId);
+            procesoData = foundByProcesoId;
+          } else {
+            // Prioridad 2: Si no se encuentra por proceso_id, intentar por id según su tipo
+            console.log('⚠️ No encontrado por proceso_id, intentando por columna ID');
+            
+            // Convertir el ID al tipo correcto según la detección
+            let searchId: number | string = decodedId;
+            if (tableInfo.idType === 'number') {
+              const numericId = Number(decodedId);
+              if (!isNaN(numericId)) {
+                searchId = numericId;
+                console.log(`📡 Buscando por ${tableInfo.idColumnName} (numérico):`, searchId);
+              } else {
+                console.log('⚠️ ID no es numérico, no se puede buscar por columna numérica');
+                searchId = decodedId; // Mantener como string
+              }
+            } else {
+              searchId = String(decodedId);
+              console.log(`📡 Buscando por ${tableInfo.idColumnName} (string):`, searchId);
+            }
+            
+            const { data: foundById, error: errorId } = await supabase
+              .from(tableInfo.tableName)
+              .select('*')
+              .eq(tableInfo.idColumnName, searchId)
+              .maybeSingle();
+            
+            if (foundById && !errorId) {
+              console.log('✅ Proceso encontrado por columna ID:', foundById);
+              procesoData = foundById;
+            }
           }
         }
 
-        // Obtener datos completos desde la API
-        const response = await api.getRecordById(dbId);
-        const rawData = response.data;
-        
-        if (rawData) {
-          // Guardar los datos originales completos
-          setRawProcessData(rawData);
-          // Transformar los datos al formato esperado
-          const transformedProcess = transformSupabaseToMock(rawData);
+        // Si se encontró en Supabase, usar esos datos
+        if (procesoData) {
+          console.log('✅ Usando datos encontrados en Supabase');
+          setRawProcessData(procesoData);
+          const transformedProcess = transformSupabaseToMock(procesoData);
           setProceso(transformedProcess);
         } else {
-          setError('No se encontró el proceso');
+          console.log('⚠️ No se encontró en Supabase, intentando con la API como fallback');
+          
+          // Si no se encontró en Supabase, intentar con la API como fallback
+          // La API ahora acepta tanto IDs numéricos como proceso_id strings
+          try {
+            const response = await api.getRecordById(decodedId);
+            const rawData = response.data;
+            
+            if (rawData) {
+              console.log('✅ Datos obtenidos desde la API:', rawData);
+              setRawProcessData(rawData);
+              const transformedProcess = transformSupabaseToMock(rawData);
+              setProceso(transformedProcess);
+            } else {
+              console.error('❌ No se encontró el proceso en la API (respuesta vacía)');
+              setError('No se encontró el proceso con el ID proporcionado. Verifica que el ID sea correcto.');
+            }
+          } catch (apiError) {
+            console.error('❌ Error al obtener el proceso desde la API:', apiError);
+            const errorMessage = apiError instanceof Error ? apiError.message : 'Error desconocido';
+            
+            // Distinguir diferentes tipos de errores con mensajes claros
+            if (errorMessage.includes('No se encontró') || errorMessage.includes('404')) {
+              setError(`No se encontró el proceso con ID "${decodedId}". Verifica el ID o contacta al administrador.`);
+            } else if (errorMessage.includes('Error del servidor') || errorMessage.includes('500')) {
+              setError('Error del servidor. Por favor, intente más tarde.');
+            } else if (errorMessage.includes('Error de validación') || errorMessage.includes('400')) {
+              setError(`Error de validación: El ID "${decodedId}" no es válido. Verifica el formato del ID.`);
+            } else {
+              setError(`Error al cargar el proceso con ID "${decodedId}": ${errorMessage}`);
+            }
+          }
         }
       } catch (err) {
         console.error('Error al cargar proceso:', err);
-        setError(err instanceof Error ? err.message : 'Error al cargar el proceso');
+        const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+        
+        // Mensaje de error más descriptivo
+        if (errorMessage.includes('Tabla') && errorMessage.includes('no encontrada')) {
+          setError(`Error de configuración: ${errorMessage}`);
+        } else if (errorMessage.includes('No se encontró')) {
+          setError(`No se encontró el proceso con ID "${decodedId}". Verifica el ID o contacta al administrador.`);
+        } else {
+          setError(`Error al cargar el proceso: ${errorMessage}`);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -146,18 +239,9 @@ const ProcesoDetalle = () => {
       // Recargar los datos del proceso
       if (id) {
         try {
-          let dbId: number | string = id;
-          if (id.startsWith('PROC-') && supabase) {
-            const { data: foundData } = await supabase
-              .from('CTRANTECEDENTES')
-              .select('id')
-              .eq('proceso_id', id)
-              .single();
-            if (foundData?.id) {
-              dbId = foundData.id;
-            }
-          }
-          const response = await api.getRecordById(dbId);
+          // La API ahora acepta tanto IDs numéricos como proceso_id strings
+          const decodedId = decodeURIComponent(id);
+          const response = await api.getRecordById(decodedId);
           if (response.data) {
             // Guardar los datos originales completos
             setRawProcessData(response.data);
