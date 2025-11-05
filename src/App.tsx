@@ -1,16 +1,19 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import Navbar from './components/common/Navbar';
+import Footer from './components/common/Footer';
 import Home from './pages/Home';
 import About from './pages/About';
 import Services from './pages/Services';
 import ServiceDetail from './pages/ServiceDetail';
 import Blog from './pages/Blog';
 import Contact from './pages/Contact';
-import ClientPortal from './pages/ClientPortal';
-import AdminPanel from './pages/AdminPanel';
-import AdminLogin from './pages/AdminLogin';
+import ClienteLogin from './pages/cliente/Login';
+import ClienteProceso from './pages/cliente/Proceso';
+import AdminLogin from './pages/admin/Login';
+import Dashboard from './pages/admin/Dashboard';
+import Procesos from './pages/admin/Procesos';
+import ProcesoDetalle from './pages/admin/ProcesoDetalle';
 
 function App() {
   return (
@@ -19,15 +22,18 @@ function App() {
         <Routes>
           {/* Admin routes without header/footer */}
           <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin/panel" element={<AdminPanel />} />
+          <Route path="/admin/dashboard" element={<Dashboard />} />
+          <Route path="/admin/procesos" element={<Procesos />} />
+          <Route path="/admin/procesos/:id" element={<ProcesoDetalle />} />
           
           {/* Client portal without header/footer */}
-          <Route path="/portal" element={<ClientPortal />} />
+          <Route path="/portal" element={<ClienteLogin />} />
+          <Route path="/portal/proceso" element={<ClienteProceso />} />
           
           {/* Main website routes with header/footer */}
           <Route path="/*" element={
             <>
-              <Header />
+              <Navbar />
               <main>
                 <Routes>
                   <Route path="/" element={<Home />} />
