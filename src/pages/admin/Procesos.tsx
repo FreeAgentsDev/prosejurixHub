@@ -4,7 +4,6 @@ import { Plus, LogOut } from 'lucide-react';
 import DashboardCards from '../../components/admin/DashboardCards';
 import ProcessTable from '../../components/admin/ProcessTable';
 import SearchBar from '../../components/common/SearchBar';
-import ProcessFilters from '../../components/admin/ProcessFilters';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import ProcessForm from '../../components/admin/ProcessForm';
@@ -14,7 +13,6 @@ import { useProcesses } from '../../hooks/useProcesses';
 const Procesos = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterEstado, setFilterEstado] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
 
@@ -22,60 +20,58 @@ const Procesos = () => {
   const { procesos, procesosRaw, createProcess, updateProcess, deleteProcess, isLoaded, error } = useProcesses();
   const clientes = mockClientes;
 
-  // Estadísticas
+  // Helper para leer valores desde tabla cruda o mock
+  const getValue = (obj: any, ...keys: string[]): any => {
+    for (const key of keys) {
+      if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') return obj[key];
+    }
+    return null;
+  };
+
+  // Estadísticas basadas en tabla si existe, con fallback a mocks
   const stats = useMemo(() => {
-    const totalProcesos = procesos.length;
-    const procesosActivos = procesos.filter(p => p.estado === 'activo').length;
-    const procesosFinalizados = procesos.filter(p => p.estado === 'finalizado').length;
-    const procesosEnRevision = procesos.filter(p => p.estado === 'en_espera').length;
-    const procesosEnNegociacion = procesos.filter(p => 
-      p.estadoPublico.toLowerCase().includes('negociación') || 
-      p.estadoPublico.toLowerCase().includes('negociacion')
-    ).length;
-    
+    const origin = (procesosRaw && procesosRaw.length > 0) ? procesosRaw : procesos;
+    const totalProcesos = origin.length;
+
+    let activos = 0, finalizados = 0, enRevision = 0, enNegociacion = 0;
+    for (const p of origin) {
+      const estado = String(getValue(p, 'estado', 'Estado', 'ESTADO') ?? p.estado ?? '').toLowerCase();
+      const estadoPublico = String(getValue(p, 'estado_publico', 'estadoPublico', 'ESTADO_PUBLICO') ?? p.estadoPublico ?? '').toLowerCase();
+
+      if (estado === 'activo') activos++;
+      if (estado === 'finalizado' || estado === 'cerrado') finalizados++;
+      if (estado === 'en_espera' || estado.includes('revision') || estado.includes('revisión')) enRevision++;
+      if (estadoPublico.includes('negociacion') || estadoPublico.includes('negociación')) enNegociacion++;
+    }
+
     return {
       totalProcesos,
-      procesosActivos,
-      procesosFinalizados,
-      procesosEnRevision,
-      procesosEnNegociacion,
+      procesosActivos: activos,
+      procesosFinalizados: finalizados,
+      procesosEnRevision: enRevision,
+      procesosEnNegociacion: enNegociacion,
       totalClientes: clientes.length
     };
-  }, [procesos, clientes]);
+  }, [procesos, procesosRaw, clientes]);
 
-  // Filtrar procesos por búsqueda y estado
+  // Filtrar procesos por búsqueda (solo por nombre, INSENSIBLE a mayúsculas/minúsculas)
   const filteredProcesos = useMemo(() => {
     let filtered = procesos;
 
-    // Filtro por estado
-    if (filterEstado) {
-      if (filterEstado === 'negociacion') {
-        filtered = filtered.filter(p => 
-          p.estadoPublico.toLowerCase().includes('negociación') || 
-          p.estadoPublico.toLowerCase().includes('negociacion')
-        );
-      } else {
-        filtered = filtered.filter(p => p.estado === filterEstado);
-      }
-    }
-
-    // Filtro por búsqueda
+    // Búsqueda SOLO por nombre del cliente, case-insensitive (subcadena)
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.id.toLowerCase().includes(term) ||
-        p.clienteNombre.toLowerCase().includes(term) ||
-        p.estadoPublico.toLowerCase().includes(term) ||
-        p.demandado.toLowerCase().includes(term) ||
-        p.cedula.includes(term) ||
-        p.codigoAcceso.toLowerCase().includes(term) ||
-        (p.juzgado && p.juzgado.toLowerCase().includes(term)) ||
-        (p.tipo && p.tipo.toLowerCase().includes(term))
-      );
+      const term = searchTerm.trim().toLowerCase();
+
+      filtered = filtered.filter(p => {
+        if (!p.clienteNombre) return false;
+        const nombreCompleto = String(p.clienteNombre).toLowerCase();
+        // Coincidencia de subcadena, ignorando mayúsculas/minúsculas
+        return nombreCompleto.includes(term);
+      });
     }
 
     return filtered;
-  }, [searchTerm, filterEstado, procesos]);
+  }, [searchTerm, procesos]);
 
   const openModal = (proceso?: any) => {
     setEditingItem(proceso || null);
@@ -212,14 +208,6 @@ const Procesos = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate('/admin/dashboard')}
-                className="flex items-center space-x-2"
-              >
-                <span className="hidden sm:inline">Volver</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={() => navigate('/admin')}
                 className="flex items-center space-x-2"
               >
@@ -259,7 +247,6 @@ const Procesos = () => {
         )}
 
         <DashboardCards
-          totalClientes={stats.totalClientes}
           totalProcesos={stats.totalProcesos}
           procesosActivos={stats.procesosActivos}
           procesosEnNegociacion={stats.procesosEnNegociacion}
@@ -270,15 +257,10 @@ const Procesos = () => {
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
           <div className="flex-1 flex flex-col sm:flex-row gap-4">
             <SearchBar
-              placeholder="Buscar por ID, cliente, estado, demandado, juzgado, tipo..."
+              placeholder="Buscar usuario"
               value={searchTerm}
               onChange={setSearchTerm}
               className="flex-1"
-            />
-            <ProcessFilters
-              selectedEstado={filterEstado}
-              onEstadoChange={setFilterEstado}
-              className="flex-shrink-0"
             />
           </div>
           <Button
@@ -317,7 +299,7 @@ const Procesos = () => {
                         Verifica la consola del navegador (F12) para más detalles sobre el error.
                       </p>
                     </>
-                  ) : searchTerm || filterEstado ? (
+                  ) : searchTerm ? (
                     <>
                       <p className="text-slate-500 mb-4">
                         No se encontraron procesos con los filtros seleccionados
@@ -326,7 +308,6 @@ const Procesos = () => {
                         variant="outline"
                         onClick={() => {
                           setSearchTerm('');
-                          setFilterEstado('');
                         }}
                         className="inline-flex items-center"
                       >
@@ -376,32 +357,14 @@ const Procesos = () => {
                     codigoAcceso: p.codigoAcceso
                   }))}
                   procesosRaw={procesosRaw && procesosRaw.length > 0 ? procesosRaw.filter((p: any) => {
-                    // Filtrar los datos crudos usando los mismos filtros que se aplicaron a filteredProcesos
-                    const procId = p.id || p.ID || p.Id || p.proceso_id || p.procesoId;
-                    const procIdStr = String(procId);
-                    
-                    // Aplicar filtro de búsqueda
+                    // Filtrar datos crudos replicando la búsqueda SOLO por nombre (case-insensitive)
                     if (searchTerm) {
-                      const term = searchTerm.toLowerCase();
-                      const nombre = (p.NOMBRE || p.nombre || p.cliente_nombre || '').toLowerCase();
-                      const id = procIdStr.toLowerCase();
-                      if (!id.includes(term) && !nombre.includes(term)) {
-                        return false;
-                      }
+                      const term = searchTerm.trim().toLowerCase();
+                      const nombreOriginal = String(
+                        p.NOMBRE ?? p.nombre ?? p.cliente_nombre ?? p.Nombre ?? ''
+                      ).toLowerCase();
+                      if (!nombreOriginal.includes(term)) return false;
                     }
-                    
-                    // Aplicar filtro de estado si existe
-                    if (filterEstado) {
-                      const estado = (p.estado || p.Estado || p.estado_publico || '').toLowerCase();
-                      if (filterEstado === 'negociacion') {
-                        if (!estado.includes('negociación') && !estado.includes('negociacion')) {
-                          return false;
-                        }
-                      } else if (estado !== filterEstado) {
-                        return false;
-                      }
-                    }
-                    
                     return true;
                   }) : undefined}
                   onEdit={handleEdit}

@@ -1,8 +1,7 @@
 import React from 'react';
-import { Users, FileText, TrendingUp, Clock, CheckCircle, Eye, XCircle } from 'lucide-react';
+import { FileText, TrendingUp, Clock, CheckCircle, Eye } from 'lucide-react';
 
 interface DashboardCardsProps {
-  totalClientes: number;
   totalProcesos: number;
   procesosActivos: number;
   procesosEnNegociacion: number;
@@ -11,7 +10,6 @@ interface DashboardCardsProps {
 }
 
 const DashboardCards = ({
-  totalClientes,
   totalProcesos,
   procesosActivos,
   procesosEnNegociacion,
@@ -58,14 +56,6 @@ const DashboardCards = ({
       color: 'bg-green-500',
       bgColor: 'bg-green-50',
       textColor: 'text-green-600'
-    },
-    {
-      title: 'Total Clientes',
-      value: totalClientes,
-      icon: Users,
-      color: 'bg-indigo-500',
-      bgColor: 'bg-indigo-50',
-      textColor: 'text-indigo-600'
     }
   ];
 

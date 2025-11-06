@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Eye } from 'lucide-react';
+import { FileText, Eye, LogOut } from 'lucide-react';
 import Card from '../common/Card';
 import Table from '../common/Table';
 
@@ -68,11 +68,13 @@ const ClientProcessView = ({ processes, clientName, clientCedula, onLogout, proc
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <img 
-                src="/prosejurix-rounded.png" 
-                alt="Prosejurix Logo" 
-                className="h-10 w-10"
-              />
+              <div className="relative">
+                <img
+                  src="/prosejurix-rounded.png"
+                  alt="Prosejurix Logo"
+                  className="h-10 w-10 rounded-full ring-2 ring-blue-100 shadow-sm"
+                />
+              </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-900">Portal del Cliente</h1>
                 <p className="text-sm text-slate-600">Prosejurix</p>
@@ -80,9 +82,11 @@ const ClientProcessView = ({ processes, clientName, clientCedula, onLogout, proc
             </div>
             <button
               onClick={onLogout}
-              className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 transition-colors duration-200"
+              className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white shadow-md hover:shadow-lg transition-all"
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
             >
-              <span>Cerrar Sesión</span>
+              <LogOut className="h-5 w-5" />
             </button>
           </div>
         </div>

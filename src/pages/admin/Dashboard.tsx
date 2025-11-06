@@ -1,21 +1,22 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, FileText, LogOut, Calendar } from 'lucide-react';
+import { FileText, LogOut } from 'lucide-react';
 import DashboardCards from '../../components/admin/DashboardCards';
 import SearchBar from '../../components/common/SearchBar';
 import Table from '../../components/common/Table';
+import ProcessTable from '../../components/admin/ProcessTable';
 import Button from '../../components/common/Button';
-import { mockClientes } from '../../data/mocks';
+ 
 import { useProcesses } from '../../hooks/useProcesses';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'clientes' | 'procesos'>('procesos');
+  const [activeTab] = useState<'procesos'>('procesos');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Usar hook personalizado para gestionar procesos
-  const { procesos } = useProcesses();
-  const clientes = mockClientes;
+  const { procesos, procesosRaw, deleteProcess } = useProcesses();
+  
 
   // Estadísticas calculadas
   const stats = useMemo(() => {
@@ -27,47 +28,61 @@ const Dashboard = () => {
       p.estadoPublico.toLowerCase().includes('negociación') || 
       p.estadoPublico.toLowerCase().includes('negociacion')
     ).length;
-    const totalClientes = clientes.length;
     
     return {
       totalProcesos,
       procesosActivos,
       procesosFinalizados,
       procesosEnRevision,
-      procesosEnNegociacion,
-      totalClientes
+      procesosEnNegociacion
     };
-  }, [procesos, clientes]);
+  }, [procesos]);
 
-  // Filtrar procesos (mostrar todos desde el inicio)
+  // Filtrar procesos (mostrar todos desde el inicio) - búsqueda SOLO por nombre, insensible a mayúsculas/minúsculas
   const filteredProcesos = useMemo(() => {
     const base = [...procesos].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     if (!searchTerm) return base;
-    const term = searchTerm.toLowerCase();
-    return base.filter(p =>
-      p.id.toLowerCase().includes(term) ||
-      p.clienteNombre.toLowerCase().includes(term) ||
-      p.estadoPublico.toLowerCase().includes(term) ||
-      p.demandado.toLowerCase().includes(term)
-    );
+
+    const term = searchTerm.trim().toLowerCase();
+
+    return base.filter(p => {
+      if (!p.clienteNombre) return false;
+      const nombreCompleto = String(p.clienteNombre).toLowerCase();
+      return nombreCompleto.includes(term); // case-insensitive substring
+    });
   }, [searchTerm, procesos]);
 
-  // Filtrar clientes
-  const filteredClientes = useMemo(() => {
-    if (!searchTerm) return clientes;
-    const term = searchTerm.toLowerCase();
-    return clientes.filter(c =>
-      c.nombre.toLowerCase().includes(term) ||
-      c.cedula.includes(term) ||
-      c.email.toLowerCase().includes(term)
-    );
-  }, [searchTerm, clientes]);
+  // Filtrar clientes - búsqueda mejorada por nombre
+  
 
   const getStatusColor = (estado: string) => {
     if (estado === 'activo' || estado.includes('investigación')) return 'bg-yellow-100 text-yellow-800';
     if (estado === 'finalizado' || estado.includes('Cerrado')) return 'bg-green-100 text-green-800';
     if (estado.includes('negociación')) return 'bg-blue-100 text-blue-800';
     return 'bg-slate-100 text-slate-800';
+  };
+
+  // Handlers para usar la tabla unificada de procesos
+  const handleView = (proceso: any) => {
+    const procId =
+      proceso.proceso_id || proceso.procesoId || proceso.proceso_ID ||
+      proceso.id || proceso.ID || proceso.Id ||
+      `PROC-${proceso.ID || proceso.id || 'N/A'}`;
+    navigate(`/admin/procesos/${encodeURIComponent(String(procId))}?mode=view`);
+  };
+
+  const handleEdit = (proceso: any) => {
+    const procId =
+      proceso.proceso_id || proceso.procesoId || proceso.proceso_ID ||
+      proceso.id || proceso.ID || proceso.Id ||
+      `PROC-${proceso.ID || proceso.id || 'N/A'}`;
+    navigate(`/admin/procesos/${encodeURIComponent(String(procId))}?mode=edit`);
+  };
+
+  const handleDelete = async (id: string | number) => {
+    if (window.confirm('¿Está seguro de eliminar este proceso? Esta acción no se puede deshacer.')) {
+      await deleteProcess(String(id));
+    }
   };
 
   return (
@@ -84,7 +99,7 @@ const Dashboard = () => {
               />
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-slate-900">Panel Administrativo</h1>
-                <p className="text-xs sm:text-sm text-slate-600">Gestión de Clientes y Procesos</p>
+                <p className="text-xs sm:text-sm text-slate-600">Gestión de Procesos</p>
               </div>
             </div>
             <Button
@@ -100,32 +115,14 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* Navigation Tabs */}
+      {/* Navigation (solo Procesos) */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('procesos')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 whitespace-nowrap ${
-                activeTab === 'procesos'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
+            <div className="py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600 whitespace-nowrap">
               <FileText className="h-5 w-5 inline mr-2" />
               Procesos
-            </button>
-            <button
-              onClick={() => setActiveTab('clientes')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 whitespace-nowrap ${
-                activeTab === 'clientes'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              <Users className="h-5 w-5 inline mr-2" />
-              Clientes
-            </button>
+            </div>
           </nav>
         </div>
       </div>
@@ -133,172 +130,50 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Stats Cards - Solo mostrar en tab de procesos */}
-        {activeTab === 'procesos' && (
+        {
           <DashboardCards
-            totalClientes={stats.totalClientes}
             totalProcesos={stats.totalProcesos}
             procesosActivos={stats.procesosActivos}
             procesosEnNegociacion={stats.procesosEnNegociacion}
             procesosFinalizados={stats.procesosFinalizados}
             procesosEnRevision={stats.procesosEnRevision}
           />
-        )}
+        }
 
         {/* Search and Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-6 space-y-4 sm:space-y-0 gap-4">
           <SearchBar
-            placeholder={`Buscar ${activeTab}...`}
+            placeholder={'Buscar usuario'}
             value={searchTerm}
             onChange={setSearchTerm}
             className="w-full sm:flex-1"
           />
         </div>
 
-        {/* Procesos Table */}
-        {activeTab === 'procesos' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+        {/* Procesos Table - usar vista unificada */}
+        {
+          <>
+            <div className="bg-white rounded-lg shadow p-4 mb-4">
               <h2 className="text-lg font-semibold text-slate-900">Todos los Procesos</h2>
             </div>
-            <div className="overflow-x-auto">
-              <Table>
-                <Table.Header>
-                  <tr>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Proceso
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Cliente
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Estado
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Fecha
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Acciones
-                    </th>
-                  </tr>
-                </Table.Header>
-                <tbody className="bg-white divide-y divide-slate-200">
-                  {filteredProcesos.length === 0 ? (
-                    <Table.Row>
-                      <Table.Cell className="py-8 text-slate-500">No se encontraron procesos</Table.Cell>
-                      <Table.Cell>{''}</Table.Cell>
-                      <Table.Cell>{''}</Table.Cell>
-                      <Table.Cell>{''}</Table.Cell>
-                      <Table.Cell>{''}</Table.Cell>
-                    </Table.Row>
-                  ) : (
-                    filteredProcesos.map((proceso) => (
-                      <Table.Row key={proceso.id} className="hover:bg-slate-50">
-                        <Table.Cell>
-                          <div>
-                            <div className="text-sm font-medium text-slate-900">{proceso.id}</div>
-                            <div className="text-xs text-slate-500">Código: {proceso.codigoAcceso}</div>
-                          </div>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <div className="text-sm text-slate-900">{proceso.clienteNombre}</div>
-                          <div className="text-xs text-slate-500">CC: {proceso.cedula}</div>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(proceso.estadoPublico)}`}>
-                            {proceso.estadoPublico}
-                          </span>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <div className="text-sm text-slate-900 flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {new Date(proceso.fecha).toLocaleDateString('es-CO')}
-                          </div>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/admin/procesos/${proceso.id}`)}
-                          >
-                            Ver Detalle
-                          </Button>
-                        </Table.Cell>
-                      </Table.Row>
-                    ))
-                  )}
-                </tbody>
-              </Table>
-            </div>
-          </div>
-        )}
-
-        {/* Clientes Table */}
-        {activeTab === 'clientes' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
-              <h2 className="text-lg font-semibold text-slate-900">Clientes Registrados</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <Table>
-                <Table.Header>
-                  <tr>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Cliente
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Contacto
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Fecha Registro
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Procesos
-                    </th>
-                  </tr>
-                </Table.Header>
-                <tbody className="bg-white divide-y divide-slate-200">
-                  {filteredClientes.length === 0 ? (
-                    <Table.Row>
-                      <Table.Cell className="py-8 text-slate-500">No se encontraron clientes</Table.Cell>
-                      <Table.Cell>{''}</Table.Cell>
-                      <Table.Cell>{''}</Table.Cell>
-                      <Table.Cell>{''}</Table.Cell>
-                    </Table.Row>
-                  ) : (
-                    filteredClientes.map((cliente) => {
-                      const procesosDelCliente = procesos.filter(p => p.clienteId === cliente.id);
-                      return (
-                        <Table.Row key={cliente.id} className="hover:bg-slate-50">
-                          <Table.Cell>
-                            <div>
-                              <div className="text-sm font-medium text-slate-900">{cliente.nombre}</div>
-                              <div className="text-xs text-slate-500">CC: {cliente.cedula}</div>
-                            </div>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <div className="text-sm text-slate-900">{cliente.telefono}</div>
-                            <div className="text-xs text-slate-500">{cliente.email}</div>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <div className="text-sm text-slate-500 flex items-center">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              {new Date(cliente.fechaRegistro).toLocaleDateString('es-CO')}
-                            </div>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <span className="text-sm text-slate-900 font-medium">
-                              {procesosDelCliente.length} proceso{procesosDelCliente.length !== 1 ? 's' : ''}
-                            </span>
-                          </Table.Cell>
-                        </Table.Row>
-                      );
-                    })
-                  )}
-                </tbody>
-              </Table>
-            </div>
-          </div>
-        )}
+            <ProcessTable
+              processes={filteredProcesos.map(p => ({
+                id: p.id,
+                clienteId: p.clienteId,
+                clienteNombre: p.clienteNombre,
+                fechaIngreso: p.fechaIngreso,
+                estadoInterno: p.estado,
+                estadoPublico: p.estadoPublico,
+                demandado: p.demandado,
+                codigoAcceso: p.codigoAcceso
+              }))}
+              procesosRaw={procesosRaw}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </>
+        }
       </main>
     </div>
   );

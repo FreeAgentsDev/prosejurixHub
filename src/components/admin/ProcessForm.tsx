@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 interface ProcessFormData {
   clienteId?: number;
+  clienteNombre?: string;
   cedula?: string;
   estadoInterno?: string;
   estadoPublico?: string;
@@ -17,6 +18,10 @@ interface ProcessFormData {
   placaVehiculo?: string;
   celular?: string;
   telefono?: string;
+  correo?: string;
+  direccion?: string;
+  ciudad?: string;
+  radicado?: string;
   valorHonorarios?: number;
   valorPeritaje?: number;
   valorPrestamos?: number;
@@ -30,9 +35,12 @@ interface ProcessFormProps {
   estadosInternos: Array<{ value: string; label: string }>;
   onSubmit: (data: ProcessFormData) => void;
   onCancel: () => void;
+  // Mostrar info del cliente en solo lectura (si se provee, oculta el selector)
+  clienteNombre?: string;
+  clienteCedula?: string;
 }
 
-const ProcessForm = ({ initialData, clientes, estadosInternos, onSubmit, onCancel }: ProcessFormProps) => {
+const ProcessForm = ({ initialData, clientes, estadosInternos, onSubmit, onCancel, clienteNombre, clienteCedula }: ProcessFormProps) => {
   // Inicializar el formulario con los datos iniciales o valores por defecto
   const [formData, setFormData] = useState<ProcessFormData>(() => {
     if (initialData) {
@@ -66,6 +74,29 @@ const ProcessForm = ({ initialData, clientes, estadosInternos, onSubmit, onCance
     onSubmit(formData);
   };
 
+  // Normalizar valores de estado y tipo a opciones conocidas si vienen como texto libre de la tabla
+  useEffect(() => {
+    const normalized: Partial<ProcessFormData> = {};
+    // Estado Interno: intentar mapear por etiqueta de opciones
+    if (!formData.estadoInterno || !estadosInternos.some(opt => opt.value === formData.estadoInterno)) {
+      const source = (formData.estadoInterno || formData.estadoPublico || '').toLowerCase();
+      const match = estadosInternos.find(opt => opt.label.toLowerCase().includes(source) || source.includes(opt.label.toLowerCase()));
+      if (match) normalized.estadoInterno = match.value;
+    }
+    // Tipo: mapear a civil/penal/laboral/comercial desde texto libre
+    if (!formData.tipo || !['civil','penal','laboral','comercial'].includes(String(formData.tipo).toLowerCase())) {
+      const t = String(formData.tipo || '').toLowerCase();
+      if (t.includes('civil')) normalized.tipo = 'civil';
+      else if (t.includes('penal')) normalized.tipo = 'penal';
+      else if (t.includes('labor')) normalized.tipo = 'laboral';
+      else if (t.includes('comer')) normalized.tipo = 'comercial';
+    }
+    if (Object.keys(normalized).length > 0) {
+      setFormData(prev => ({ ...prev, ...normalized }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estadosInternos]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Información Básica */}
@@ -74,20 +105,15 @@ const ProcessForm = ({ initialData, clientes, estadosInternos, onSubmit, onCance
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Cliente *
+              Nombre del Cliente
             </label>
-            <select
-              value={formData.clienteId || ''}
-              onChange={(e) => setFormData({ ...formData, clienteId: Number(e.target.value) })}
+            <input
+              type="text"
+              value={formData.clienteNombre ?? clienteNombre ?? ''}
+              onChange={(e) => setFormData({ ...formData, clienteNombre: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Seleccionar cliente</option>
-              {clientes.map(cliente => (
-                <option key={cliente.id} value={cliente.id}>
-                  {cliente.nombre}
-                </option>
-              ))}
-            </select>
+              placeholder="Nombre del cliente"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -182,6 +208,43 @@ const ProcessForm = ({ initialData, clientes, estadosInternos, onSubmit, onCance
         </div>
       </div>
 
+      {/* Contacto y Ubicación */}
+      <div className="border-b border-slate-200 pb-4">
+        <h4 className="text-sm font-semibold text-slate-700 mb-4">Contacto y Ubicación</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Correo</label>
+            <input
+              type="email"
+              value={formData.correo || ''}
+              onChange={(e) => setFormData({ ...formData, correo: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="correo@ejemplo.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Ciudad</label>
+            <input
+              type="text"
+              value={formData.ciudad || ''}
+              onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Ciudad"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
+            <input
+              type="text"
+              value={formData.direccion || ''}
+              onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Dirección del cliente"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Fechas */}
       <div className="border-b border-slate-200 pb-4">
         <h4 className="text-sm font-semibold text-slate-700 mb-4">Fechas</h4>
@@ -219,6 +282,16 @@ const ProcessForm = ({ initialData, clientes, estadosInternos, onSubmit, onCance
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Radicado</label>
+          <input
+            type="text"
+            value={formData.radicado || ''}
+            onChange={(e) => setFormData({ ...formData, radicado: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono"
+            placeholder="Número de radicado"
+          />
         </div>
       </div>
 

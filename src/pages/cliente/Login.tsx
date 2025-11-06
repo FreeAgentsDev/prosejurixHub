@@ -62,10 +62,17 @@ const ClienteLogin = () => {
         ) || null;
         
         if (!clienteIdColumnName) {
-          // Si no encontramos cliente_id, mostrar las columnas disponibles
-          console.warn('⚠️ No se encontró columna cliente_id. Columnas disponibles:', columnas);
-          alert(`No se encontró columna cliente_id en la tabla. Columnas disponibles: ${columnas.slice(0, 10).join(', ')}${columnas.length > 10 ? '...' : ''}`);
-          return;
+          // Fallback: muchas tablas usan 'ID' como identificador del cliente
+          const idColumn = columnas.find(col => col.toLowerCase() === 'id');
+          if (idColumn) {
+            clienteIdColumnName = idColumn;
+            console.warn(`⚠️ No se encontró columna cliente_id. Usando columna fallback "${idColumn}"`);
+          } else {
+            // Si no encontramos cliente_id ni ID, mostrar columnas disponibles
+            console.warn('⚠️ No se encontró columna cliente_id. Columnas disponibles:', columnas);
+            alert(`No se encontró columna cliente_id en la tabla. Columnas disponibles: ${columnas.slice(0, 10).join(', ')}${columnas.length > 10 ? '...' : ''}`);
+            return;
+          }
         }
         
         console.log(`✅ Columna cliente_id encontrada: "${clienteIdColumnName}"`);
@@ -75,12 +82,20 @@ const ClienteLogin = () => {
         console.log('⚠️ Tabla vacía, usando nombre de columna por defecto: "cliente_id"');
       }
       
-      // Buscar todos los procesos del cliente por cliente_id
+      // Buscar todos los procesos del cliente por cliente_id (o columna fallback)
       console.log('🔎 Buscando procesos del cliente...', { tableName, clienteIdColumn: clienteIdColumnName, clienteId });
-      const { data: procesosCliente, error: queryError } = await supabase
+      let { data: procesosCliente, error: queryError } = await supabase
         .from(tableName)
         .select('*')
         .eq(clienteIdColumnName, clienteId);
+      // Si la columna es texto y el filtro numérico falla, reintentar como string
+      if ((!procesosCliente || procesosCliente.length === 0) && !queryError) {
+        const retry = await supabase
+          .from(tableName)
+          .select('*')
+          .eq(clienteIdColumnName, String(clienteId));
+        if (!retry.error && retry.data) procesosCliente = retry.data;
+      }
       
       if (queryError) {
         console.error('❌ Error en la consulta:', queryError);
@@ -95,7 +110,7 @@ const ClienteLogin = () => {
       }
 
       console.log(`✅ Procesos encontrados para el cliente ${clienteId}: ${procesosCliente.length}`);
-      console.log('📊 Procesos encontrados:', procesosCliente);
+      console.log('📊 Procesos encontrados (por cliente_id/ID):', procesosCliente);
 
       // Obtener información del cliente del primer proceso
       const primerProceso = procesosCliente[0];
@@ -128,14 +143,64 @@ const ClienteLogin = () => {
 
       const cedula = cedulaColumnName ? primerProceso[cedulaColumnName] : '';
 
-      console.log(`✅ Procesos encontrados para el cliente: ${procesosCliente.length}`);
-      console.log('📋 IDs de procesos encontrados:', procesosCliente.map((p: any) => p.proceso_id || p.procesoId || p.ID || p.id));
+      // Si tenemos cédula, buscar TODOS los registros con esa misma cédula en todas las columnas equivalentes
+      let procesosPorCedula = procesosCliente;
+      if (cedula && String(cedula).trim() !== '') {
+        try {
+          // Detectar todas las columnas que representen cédula/NIT en esta tabla
+          const posiblesCedulaCols = Array.from(new Set([
+            ...(Array.isArray(columnas) ? columnas : []).filter(col => {
+              const n = col.toLowerCase();
+              return n.includes('cédula') || n.includes('cedula') || n.includes('nit');
+            }),
+            'CÉDULA / NIT', 'CÉDULA_NIT', 'CÉDULA/NIT', 'cedula_nit', 'cedula', 'Cedula', 'CÉDULA', 'CEDULA', 'nit', 'NIT'
+          ]));
+
+          const consultas = posiblesCedulaCols.map(col =>
+            supabase
+              .from(tableName)
+              .select('*')
+              .eq(col, cedula)
+          );
+
+          const resultados = await Promise.all(consultas);
+          const combinados: any[] = [];
+          const seen = new Set<string>();
+          const getRowKey = (row: any): string => {
+            return String(
+              row.proceso_id ?? row.procesoId ?? row.ID ?? row.id ?? `${row[colCedula] ?? ''}-${row.RADICADO ?? row.radicado ?? ''}`
+            );
+          };
+
+          for (const r of resultados) {
+            if (r.data && Array.isArray(r.data)) {
+              for (const row of r.data) {
+                const key = getRowKey(row);
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  combinados.push(row);
+                }
+              }
+            }
+          }
+
+          if (combinados.length > 0) {
+            procesosPorCedula = combinados;
+          }
+          console.log(`🔎 Búsqueda por cédula en ${posiblesCedulaCols.length} columnas → ${procesosPorCedula.length} filas`);
+        } catch (e) {
+          console.warn('⚠️ Error buscando por cédula, se usan resultados por ID únicamente:', e);
+        }
+      }
+
+      console.log(`✅ Procesos totales a mostrar: ${procesosPorCedula.length}`);
+      console.log('📋 IDs de procesos:', procesosPorCedula.map((p: any) => p.proceso_id || p.procesoId || p.ID || p.id));
 
       navigate('/portal/proceso', {
         state: { 
           clienteId: clienteId,
           cedula: cedula || '',
-          procesos: procesosCliente
+          procesos: procesosPorCedula
         }
       });
     } catch (error) {
@@ -147,18 +212,18 @@ const ClienteLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <Link to="/" className="inline-block mb-8">
-            <img 
-              src="/prosejurix-rounded.png" 
-              alt="Prosejurix Logo" 
-              className="h-20 mx-auto"
+          <Link to="/" className="inline-block mb-6">
+            <img
+              src="/prosejurix-rounded.png"
+              alt="Prosejurix Logo"
+              className="h-16 sm:h-20 mx-auto drop-shadow"
             />
           </Link>
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Portal del Cliente</h2>
-          <p className="text-slate-600">Accede para consultar el estado de tus procesos legales</p>
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Portal del Cliente</h2>
+          <p className="text-slate-600 mt-1">Consulta el estado de tus procesos legales</p>
         </div>
 
         <ClientLoginForm onLogin={handleLogin} />

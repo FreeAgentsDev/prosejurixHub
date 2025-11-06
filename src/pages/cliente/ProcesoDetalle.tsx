@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, Building2, FileText, Tag, DollarSign, AlertCircle, Phone, Mail } from 'lucide-react';
 import Button from '../../components/common/Button';
 import { supabase } from '../../lib/supabase';
+import { detectTableAndIdType } from '../../lib/supabaseInspector';
 
 const ProcesoDetalleCliente = () => {
   const { id } = useParams();
@@ -36,7 +37,7 @@ const ProcesoDetalleCliente = () => {
       .join(' ');
   };
 
-  // Cargar proceso
+  // Cargar proceso completo desde Supabase
   useEffect(() => {
     const loadProcess = async () => {
       if (!id) {
@@ -44,99 +45,96 @@ const ProcesoDetalleCliente = () => {
         return;
       }
 
+      // Decodificar el ID si viene codificado en la URL
+      const decodedId = decodeURIComponent(id);
+      console.log('🔍 Buscando proceso con ID:', decodedId);
+
       setIsLoading(true);
       setError(null);
 
       try {
         let procesoData = null;
 
-        // Primero intentar obtener desde el estado de navegación
-        if (procesosFromState && Array.isArray(procesosFromState)) {
+        // SIEMPRE buscar en Supabase para obtener los datos más actualizados
+        if (supabase) {
+          // Detectar tabla y tipo de ID
+          const tableInfo = await detectTableAndIdType();
+          console.log('📡 Buscando en Supabase por proceso_id:', decodedId);
+          
+          // Prioridad 1: Buscar por proceso_id (si existe)
+          const { data: foundByProcesoId, error: errorProcesoId } = await supabase
+            .from(tableInfo.tableName)
+            .select('*')
+            .eq('proceso_id', decodedId)
+            .maybeSingle();
+          
+          if (foundByProcesoId && !errorProcesoId) {
+            console.log('✅ Proceso encontrado por proceso_id:', foundByProcesoId);
+            procesoData = foundByProcesoId;
+          } else {
+            // Prioridad 2: Si no se encuentra por proceso_id, intentar por id según su tipo
+            console.log('⚠️ No encontrado por proceso_id, intentando por columna ID');
+            
+            // Convertir el ID al tipo correcto según la detección
+            let searchId: number | string = decodedId;
+            if (tableInfo.idType === 'number') {
+              const numericId = Number(decodedId);
+              if (!isNaN(numericId)) {
+                searchId = numericId;
+                console.log(`📡 Buscando por ${tableInfo.idColumnName} (numérico):`, searchId);
+              } else {
+                console.log('⚠️ ID no es numérico, no se puede buscar por columna numérica');
+                searchId = decodedId; // Mantener como string
+              }
+            } else {
+              searchId = String(decodedId);
+              console.log(`📡 Buscando por ${tableInfo.idColumnName} (string):`, searchId);
+            }
+            
+            const { data: foundById, error: errorId } = await supabase
+              .from(tableInfo.tableName)
+              .select('*')
+              .eq(tableInfo.idColumnName, searchId)
+              .maybeSingle();
+            
+            if (foundById && !errorId) {
+              console.log('✅ Proceso encontrado por columna ID:', foundById);
+              procesoData = foundById;
+            }
+          }
+        }
+
+        // Si no se encontró en Supabase, intentar con el estado de navegación como fallback
+        if (!procesoData && procesosFromState && Array.isArray(procesosFromState)) {
+          console.log('⚠️ No encontrado en Supabase, usando datos del estado de navegación');
           procesoData = procesosFromState.find((p: any) => {
-            // Priorizar proceso_id (ID del proceso) sobre otros campos
             const procId = getValue(p, 'proceso_id', 'procesoId', 'PROCESO_ID', 'ID', 'id', 'Id');
             const procIdStr = procId ? String(procId) : '';
-            
-            // Formatear el ID priorizando proceso_id (como se hace en Proceso.tsx)
-            const procIdFormatted = p.proceso_id || p.procesoId || p['PROCESO_ID'] || 
-                                   p.ID || p.id || p.Id || 
-                                   `PROC-${p.ID || p.id || 'N/A'}`;
-            const procIdFormattedStr = String(procIdFormatted);
-            
-            // Comparar con diferentes formatos, priorizando proceso_id
-            return String(procIdStr) === String(id) || 
-                   procIdFormattedStr === String(id) ||
-                   (String(id).startsWith('PROC-') && String(id).replace('PROC-', '') === procIdStr) ||
-                   (procIdStr && String(id).includes(procIdStr));
+            return String(procIdStr) === String(decodedId) ||
+                   (String(decodedId).startsWith('PROC-') && String(decodedId).replace('PROC-', '') === procIdStr);
           });
         }
 
-        // Si no se encontró en el estado, buscar en Supabase
-        // Priorizar búsqueda por proceso_id (ID del proceso)
-        if (!procesoData && supabase) {
-          // Primero intentar buscar por proceso_id (ID del proceso)
-          const { data: foundDataByProcesoId, error: errorProcesoId } = await supabase
-            .from('CTRANTECEDENTES')
-            .select('*')
-            .eq('proceso_id', id)
-            .maybeSingle();
-          
-          if (foundDataByProcesoId && !errorProcesoId) {
-            procesoData = foundDataByProcesoId;
-          } else {
-            // Si no se encuentra por proceso_id y el ID parece numérico, buscar por id numérico
-            const numericId = Number(id);
-            if (!isNaN(numericId)) {
-              const { data: foundDataById, error: errorId } = await supabase
-                .from('CTRANTECEDENTES')
-                .select('*')
-                .eq('id', numericId)
-                .maybeSingle();
-              
-              if (foundDataById && !errorId) {
-                procesoData = foundDataById;
-              }
-            }
-          }
-        }
-
-        // Si aún no se encontró, intentar búsquedas adicionales por proceso_id
-        if (!procesoData && supabase && id) {
-          // Intentar buscar con diferentes variaciones, priorizando proceso_id
-          const idStr = String(id);
-          const searchTerms = [
-            { field: 'proceso_id', value: idStr },
-            { field: 'proceso_id', value: idStr.toUpperCase() },
-            { field: 'proceso_id', value: idStr.toLowerCase() }
-          ];
-
-          for (const searchTerm of searchTerms) {
-            try {
-              const { data: foundData, error: searchError } = await supabase
-                .from('CTRANTECEDENTES')
-                .select('*')
-                .eq(searchTerm.field, searchTerm.value)
-                .maybeSingle();
-              
-              if (foundData && !searchError) {
-                procesoData = foundData;
-                break;
-              }
-            } catch (err) {
-              // Continuar con el siguiente término de búsqueda
-              continue;
-            }
-          }
-        }
-
         if (procesoData) {
+          console.log('✅ Datos del proceso cargados:', procesoData);
+          console.log('📋 Todos los campos disponibles:', Object.keys(procesoData));
           setProceso(procesoData);
         } else {
-          setError('No se encontró el proceso');
+          console.error('❌ No se encontró el proceso con ID:', decodedId);
+          setError(`No se encontró el proceso con ID "${decodedId}". Verifica el ID o contacta al administrador.`);
         }
       } catch (err) {
         console.error('Error al cargar proceso:', err);
-        setError(err instanceof Error ? err.message : 'Error al cargar el proceso');
+        const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+        
+        // Mensaje de error más descriptivo
+        if (errorMessage.includes('Tabla') && errorMessage.includes('no encontrada')) {
+          setError(`Error de configuración: ${errorMessage}`);
+        } else if (errorMessage.includes('No se encontró')) {
+          setError(`No se encontró el proceso con ID "${decodedId}". Verifica el ID o contacta al administrador.`);
+        } else {
+          setError(`Error al cargar el proceso: ${errorMessage}`);
+        }
       } finally {
         setIsLoading(false);
       }

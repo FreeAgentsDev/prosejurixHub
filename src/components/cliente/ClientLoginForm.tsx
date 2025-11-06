@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { LogIn, ArrowLeft } from 'lucide-react';
 import Input from '../common/Input';
 import Button from '../common/Button';
 
@@ -16,7 +17,7 @@ const ClientLoginForm = ({ onLogin }: ClientLoginFormProps) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+    <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-100">
       <form onSubmit={handleSubmit} className="space-y-6">
         <Input
           label="ID del Cliente"
@@ -27,8 +28,15 @@ const ClientLoginForm = ({ onLogin }: ClientLoginFormProps) => {
           placeholder="Ingresa tu ID de cliente"
         />
 
-        <Button type="submit" variant="primary" className="w-full">
-          Ingresar al Portal
+        <Button
+          type="submit"
+          variant="primary"
+          className="w-full rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 border-0 shadow-md hover:shadow-lg transition-all"
+        >
+          <span className="inline-flex items-center justify-center gap-2">
+            <LogIn className="h-5 w-5" />
+            <span className="font-semibold">Ingresar al Portal</span>
+          </span>
         </Button>
       </form>
 
@@ -52,12 +60,14 @@ const ClientLoginForm = ({ onLogin }: ClientLoginFormProps) => {
         </a>
       </div>
 
-      <div className="mt-6 text-center">
+      <div className="mt-6 flex justify-center">
         <Link
           to="/"
-          className="text-slate-600 hover:text-slate-700 text-sm"
+          aria-label="Volver al sitio web"
+          title="Volver"
+          className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 shadow-sm hover:shadow transition-all"
         >
-          ← Volver al sitio web
+          <ArrowLeft className="h-5 w-5" />
         </Link>
       </div>
     </div>
