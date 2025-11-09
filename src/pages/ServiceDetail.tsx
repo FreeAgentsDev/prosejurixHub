@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Clock, Users, Shield, Phone } from 'lucide-react';
+import LandingLayout from '../components/common/LandingLayout';
 
 const ServiceDetail = () => {
   const { serviceId } = useParams();
@@ -10,7 +11,7 @@ const ServiceDetail = () => {
       title: 'Responsabilidad Civil por Accidentes de Tránsito',
       description: 'Representación legal especializada en accidentes vehiculares de todo tipo, desde colisiones menores hasta accidentes graves con lesiones personales. Nuestro equipo tiene amplia experiencia en la recuperación de compensaciones justas por daños materiales, lesiones corporales, lucro cesante y daño moral.',
       icon: '🚗',
-      color: 'bg-blue-500',
+      color: 'from-blue-500 to-blue-400',
       detailedInfo: `Los accidentes de tránsito pueden cambiar tu vida en segundos. Cuando eres víctima de un accidente causado por la negligencia de otro conductor, tienes derecho a una compensación justa que cubra todos los daños sufridos.
 
       En Prosejurix entendemos la complejidad de estos casos y trabajamos incansablemente para asegurar que recibas la compensación que mereces. Nuestro enfoque integral incluye la evaluación médica de lesiones, el análisis técnico del accidente, la negociación con aseguradoras y, si es necesario, la representación judicial.`,
@@ -47,7 +48,7 @@ const ServiceDetail = () => {
       title: 'Responsabilidad Médica',
       description: 'Defensa especializada en casos de mala praxis médica, errores de diagnóstico, negligencia hospitalaria y daños por tratamientos inadecuados. Protegemos los derechos de pacientes y familias afectadas por errores médicos.',
       icon: '⚕️',
-      color: 'bg-green-500',
+      color: 'from-emerald-500 to-teal-400',
       detailedInfo: `La confianza que depositamos en los profesionales de la salud es fundamental, pero cuando esa confianza se ve traicionada por negligencia o mala praxis, las consecuencias pueden ser devastadoras.
 
       En Prosejurix tenemos la experiencia y los recursos necesarios para enfrentar casos complejos de responsabilidad médica. Trabajamos con peritos médicos reconocidos y analizamos meticulosamente cada aspecto del tratamiento para determinar si hubo negligencia y cuáles fueron sus consecuencias.`,
@@ -84,7 +85,7 @@ const ServiceDetail = () => {
       title: 'Responsabilidad Contractual',
       description: 'Asesoría y representación en incumplimientos contractuales, reclamación de perjuicios por breach de contrato y responsabilidad por daños derivados de relaciones contractuales.',
       icon: '📋',
-      color: 'bg-purple-500',
+      color: 'from-purple-500 to-indigo-400',
       detailedInfo: `Los contratos son la base de las relaciones comerciales y civiles. Cuando una de las partes incumple sus obligaciones contractuales, la parte afectada tiene derecho a reclamar una compensación por los perjuicios sufridos.
 
       En Prosejurix analizamos meticulosamente cada contrato para identificar las obligaciones incumplidas y cuantificar los daños resultantes. Nuestro objetivo es obtener una compensación integral que incluya tanto el daño emergente como el lucro cesante.`,
@@ -121,7 +122,7 @@ const ServiceDetail = () => {
       title: 'Responsabilidad del Estado',
       description: 'Reclamaciones contra entidades públicas por daños causados por acción u omisión estatal. Defendemos a ciudadanos afectados por fallas en el servicio público.',
       icon: '🏛️',
-      color: 'bg-red-500',
+      color: 'from-rose-500 to-orange-400',
       detailedInfo: `El Estado tiene la obligación de prestar servicios públicos de manera eficiente y segura. Cuando las entidades públicas causan daños a los ciudadanos por acción u omisión, existe responsabilidad estatal que debe ser reparada.
 
       En Prosejurix tenemos amplia experiencia en reclamaciones contra el Estado, conocemos los procedimientos especiales y los términos aplicables. Representamos a ciudadanos en casos de falla del servicio, daño especial y reparación directa.`,
@@ -158,7 +159,7 @@ const ServiceDetail = () => {
       title: 'Daños a la Propiedad',
       description: 'Recuperación de daños materiales a bienes inmuebles y muebles causados por terceros, incluyendo daños por construcciones, inundaciones y otros eventos.',
       icon: '🏠',
-      color: 'bg-orange-500',
+      color: 'from-amber-500 to-yellow-400',
       detailedInfo: `Los daños a la propiedad pueden ocurrir por diversas causas: construcciones vecinas, inundaciones, incendios, vandalismo o negligencia de terceros. Cuando estos daños son causados por la acción u omisión de otros, tienes derecho a una compensación completa.
 
       En Prosejurix evaluamos integralmente los daños a tu propiedad, trabajamos con peritos especializados en avalúos y construcción, y luchamos por obtener una compensación que cubra tanto la reparación como los perjuicios adicionales.`,
@@ -195,7 +196,7 @@ const ServiceDetail = () => {
       title: 'Responsabilidad por Productos Defectuosos',
       description: 'Representación en casos de daños causados por productos defectuosos, incluyendo alimentos, medicamentos, electrodomésticos y otros bienes de consumo.',
       icon: '📦',
-      color: 'bg-teal-500',
+      color: 'from-teal-500 to-cyan-400',
       detailedInfo: `Los consumidores tienen derecho a productos seguros y de calidad. Cuando un producto defectuoso causa daños, tanto el fabricante como el distribuidor pueden ser responsables de compensar a las víctimas.
 
       En Prosejurix manejamos casos de responsabilidad por productos defectuosos, desde alimentos contaminados hasta electrodomésticos peligrosos. Investigamos toda la cadena de producción y distribución para identificar a todos los responsables.`,
@@ -234,83 +235,54 @@ const ServiceDetail = () => {
 
   if (!service) {
     return (
-      <div className="py-20 text-center">
-        <h1 className="text-3xl font-bold text-slate-900 mb-4">Servicio no encontrado</h1>
-        <Link to="/servicios" className="text-blue-600 hover:text-blue-700">
-          Volver a servicios
+      <LandingLayout>
+        <div className="mx-auto max-w-3xl px-4 py-32 text-center text-white">
+          <h1 className="text-4xl font-bold">Servicio no encontrado</h1>
+          <Link to="/servicios" className="mt-6 inline-flex items-center text-blue-200 hover:text-white">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a servicios
         </Link>
       </div>
+      </LandingLayout>
     );
   }
 
   return (
-    <div className="py-16">
-      {/* Breadcrumb */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+    <LandingLayout>
+      <section className="relative overflow-hidden">
+        <div className={`absolute inset-0 bg-gradient-to-br ${service.color} opacity-20`} />
+        <div className="relative mx-auto max-w-5xl px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
         <Link 
           to="/servicios" 
-          className="inline-flex items-center text-blue-600 hover:text-blue-700 transition-colors duration-200"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-blue-200/80 transition hover:border-white/20 hover:bg-white/10"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver a Servicios
+            <ArrowLeft className="h-4 w-4" /> Volver a Servicios
         </Link>
+          <div className="mt-10 flex flex-col gap-10 lg:flex-row lg:items-center">
+            <div className="flex-1 space-y-6">
+              <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-5 py-2 text-lg text-white">
+                <span className="text-3xl">{service.icon}</span>
+                <span className="font-semibold uppercase tracking-[0.35em] text-blue-200/80">Especialidad</span>
       </div>
-
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center mb-6">
-            <div className={`${service.color} rounded-lg p-4 text-white text-4xl mr-6`}>
-              {service.icon}
+              <h1 className="text-4xl font-bold text-white sm:text-5xl">{service.title}</h1>
+              <p className="max-w-2xl text-lg text-blue-100">{service.description}</p>
             </div>
-            <h1 className="text-4xl lg:text-5xl font-bold">{service.title}</h1>
+            <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_60px_rgba(15,23,42,0.45)] backdrop-blur">
+              <h3 className="text-xl font-semibold text-white">¿Necesitas ayuda con este caso?</h3>
+              <div className="mt-6 space-y-4 text-blue-100/90">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-blue-200" /> Consulta gratuita inicial
           </div>
-          <p className="text-xl lg:text-2xl text-blue-100 max-w-4xl">
-            {service.description}
-          </p>
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-blue-200" /> Equipo especializado
         </div>
-      </section>
-
-      {/* Detailed Information */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            <div className="lg:col-span-2">
-              <h2 className="text-3xl font-bold text-slate-900 mb-6">
-                Información Detallada
-              </h2>
-              <div className="prose prose-lg text-slate-700 leading-relaxed">
-                {service.detailedInfo.split('\n\n').map((paragraph: string, index: number) => (
-                  <p key={index} className="mb-6">
-                    {paragraph.trim()}
-                  </p>
-                ))}
+                <div className="flex items-center gap-3">
+                  <Shield className="h-5 w-5 text-blue-200" /> Honorarios condicionales
               </div>
             </div>
-            
-            <div className="bg-slate-50 rounded-xl p-8">
-              <h3 className="text-2xl font-bold text-slate-900 mb-6">
-                ¿Necesitas ayuda con este tipo de caso?
-              </h3>
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center text-slate-700">
-                  <Clock className="h-5 w-5 text-blue-600 mr-3" />
-                  <span>Consulta gratuita</span>
-                </div>
-                <div className="flex items-center text-slate-700">
-                  <Users className="h-5 w-5 text-blue-600 mr-3" />
-                  <span>Equipo especializado</span>
-                </div>
-                <div className="flex items-center text-slate-700">
-                  <Shield className="h-5 w-5 text-blue-600 mr-3" />
-                  <span>Sin honorarios hasta ganar</span>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
+              <div className="mt-6 space-y-3">
                 <Link
                   to="/contacto"
-                  className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 text-center block"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-white/20 transition hover:-translate-y-0.5 hover:bg-blue-50"
                 >
                   Agenda tu Consulta
                 </Link>
@@ -318,10 +290,9 @@ const ServiceDetail = () => {
                   href="https://wa.me/573001234567"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors duration-200 text-center block flex items-center justify-center"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
                 >
-                  <Phone className="h-4 w-4 mr-2" />
-                  WhatsApp
+                  <Phone className="h-4 w-4" /> WhatsApp Inmediato
                 </a>
               </div>
             </div>
@@ -329,65 +300,103 @@ const ServiceDetail = () => {
         </div>
       </section>
 
-      {/* Process Section */}
-      <section className="py-20 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-slate-900 mb-12 text-center">
-            Proceso Legal para {service.title}
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="relative py-24">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/10 via-white/0 to-white/0" />
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 shadow-[0_30px_60px_rgba(15,23,42,0.45)] backdrop-blur">
+            <h2 className="text-3xl font-bold text-white">Información Detallada</h2>
+            <div className="mt-8 space-y-6 text-base leading-relaxed text-blue-100">
+              {service.detailedInfo.split('\n\n').map((paragraph: string, idx: number) => (
+                <p key={idx}>{paragraph.trim()}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative py-24">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/0 via-white/8 to-white/0" />
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-16 text-center">
+            <span className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-blue-200/80">
+              Ruta Estratégica
+            </span>
+            <h2 className="mt-6 text-3xl font-bold text-white">Proceso Legal para {service.title}</h2>
+            <p className="mt-4 text-lg text-blue-100">
+              Cada etapa se ejecuta con controles de calidad, seguimiento digital y transparencia absoluta para nuestros clientes.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {service.process.map((step: string, index: number) => (
-              <div key={index} className="bg-white rounded-lg p-6 shadow-md">
-                <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm mb-4">
+              <div
+                key={step}
+                className="rounded-3xl border border-white/10 bg-slate-950/60 p-6 text-blue-100 shadow-[0_20px_55px_rgba(15,23,42,0.45)] backdrop-blur"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-200/40 bg-blue-500/20 text-sm font-semibold text-blue-100">
                   {index + 1}
                 </div>
-                <p className="text-slate-700 font-medium">{step}</p>
+                <p className="mt-4 text-sm font-semibold text-white">{step}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FAQs Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-slate-900 mb-12 text-center">
+      <section className="relative py-24">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/0 via-white/10 to-white/0" />
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <span className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-blue-200/80">
             Preguntas Frecuentes
-          </h2>
-          
+            </span>
+            <h2 className="mt-6 text-3xl font-bold text-white">Resolvemos tus dudas</h2>
+            <p className="mt-4 text-lg text-blue-100">
+              Información clave para que tomes decisiones con seguridad y respaldo jurídico.
+            </p>
+          </div>
           <div className="space-y-6">
-            {service.faqs.map((faq: any, index: number) => (
-              <div key={index} className="bg-slate-50 rounded-lg p-6">
-                <h3 className="text-xl font-bold text-slate-900 mb-3 flex items-start">
-                  <CheckCircle className="h-6 w-6 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+            {service.faqs.map((faq: any) => (
+              <div
+                key={faq.question}
+                className="rounded-3xl border border-white/10 bg-white/5 p-6 text-blue-100 shadow-[0_25px_60px_rgba(15,23,42,0.45)] backdrop-blur"
+              >
+                <h3 className="flex items-start gap-3 text-lg font-semibold text-white">
+                  <CheckCircle className="h-5 w-5 text-green-300" />
                   {faq.question}
                 </h3>
-                <p className="text-slate-700 leading-relaxed ml-9">{faq.answer}</p>
+                <p className="mt-3 pl-8 text-sm text-blue-100/90">{faq.answer}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-blue-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">
-            Inicia tu Reclamo Hoy
-          </h2>
-          <p className="text-xl text-blue-100 mb-8">
+      <section className="relative pb-24 pt-8">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/0 via-white/14 to-white/8" />
+        <div className="mx-auto max-w-5xl rounded-3xl border border-white/10 bg-gradient-to-r from-blue-600/40 via-indigo-600/40 to-blue-600/40 px-6 py-16 text-center shadow-[0_35px_70px_rgba(15,23,42,0.55)] backdrop-blur sm:px-12">
+          <h2 className="text-3xl font-bold text-white sm:text-4xl">Inicia tu Reclamo Hoy</h2>
+          <p className="mt-4 text-lg text-blue-100">
             No esperes más para defender tus derechos. Cada día cuenta cuando se trata de tu caso.
           </p>
+          <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
           <Link
             to="/contacto"
-            className="bg-yellow-500 text-slate-900 px-8 py-4 rounded-lg font-bold text-lg hover:bg-yellow-400 transition-colors duration-200 inline-block"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-blue-700 shadow-lg shadow-white/20 transition hover:-translate-y-0.5 hover:bg-blue-50"
           >
             Agenda tu Consulta Gratuita
           </Link>
+            <a
+              href="https://wa.me/573001234567"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-8 py-4 text-base font-semibold text-white transition hover:border-white/60 hover:bg-white/10"
+            >
+              WhatsApp Inmediato
+            </a>
+          </div>
         </div>
       </section>
-    </div>
+    </LandingLayout>
   );
 };
 

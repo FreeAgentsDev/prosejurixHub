@@ -15,10 +15,12 @@ import AdminLogin from './pages/admin/Login';
 import Dashboard from './pages/admin/Dashboard';
 import Procesos from './pages/admin/Procesos';
 import ProcesoDetalle from './pages/admin/ProcesoDetalle';
+import ScrollToTop from './components/common/ScrollToTop';
 
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen bg-white">
         <Routes>
           {/* Admin routes without header/footer */}

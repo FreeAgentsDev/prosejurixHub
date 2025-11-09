@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Phone, Mail, MapPin, Clock, MessageCircle, Send, CheckCircle } from 'lucide-react';
+import LandingLayout from '../components/common/LandingLayout';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -31,11 +32,8 @@ const Contact = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate form submission
     setIsSubmitted(true);
     setTimeout(() => setIsSubmitted(false), 5000);
-    
-    // Reset form
     setFormData({
       nombre: '',
       apellido: '',
@@ -47,209 +45,184 @@ const Contact = () => {
   };
 
   return (
-    <div className="py-16">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl lg:text-5xl font-bold mb-6">
+    <LandingLayout>
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.25),_transparent_55%)]" />
+        <div className="relative mx-auto flex max-w-5xl flex-col items-center px-4 py-24 text-center sm:px-6 lg:px-8 lg:py-28">
+          <span className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-blue-200/80">
+            Agenda tu Consulta
+          </span>
+          <h1 className="mt-6 text-4xl font-bold text-white sm:text-5xl lg:text-6xl">
             Contáctanos para Asesoría Legal
           </h1>
-          <p className="text-xl lg:text-2xl text-blue-100 max-w-3xl mx-auto">
-            Estamos aquí para ayudarte. Agenda tu consulta gratuita y descubre 
-            cómo podemos defender tus derechos.
+          <p className="mt-6 max-w-3xl text-lg text-blue-100">
+            Estamos aquí para ayudarte. Agenda tu consulta gratuita y descubre cómo podemos defender tus derechos con transparencia y resultados.
           </p>
         </div>
       </section>
 
-      {/* Contact Form and Info */}
-      <section className="py-20 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Contact Form */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h2 className="text-3xl font-bold text-slate-900 mb-6">
-                Envíanos tu Consulta
-              </h2>
-              <p className="text-slate-600 mb-8">
+      <section className="relative pb-24 pt-8">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/10 via-white/0 to-white/0" />
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-10 shadow-[0_35px_80px_rgba(15,23,42,0.45)] backdrop-blur">
+              <h2 className="text-3xl font-bold text-white">Envíanos tu Consulta</h2>
+              <p className="mt-3 text-sm text-blue-200/80">
                 Completa el formulario y nos pondremos en contacto contigo en menos de 24 horas.
               </p>
 
               {isSubmitted && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
-                  <span className="text-green-700">¡Mensaje enviado exitosamente! Te contactaremos pronto.</span>
+                <div className="mt-6 flex items-center gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                  <CheckCircle className="h-5 w-5" />
+                  ¡Mensaje enviado exitosamente! Te contactaremos pronto.
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="nombre" className="block text-sm font-medium text-slate-700 mb-2">
-                      Nombre *
-                    </label>
+              <form onSubmit={handleSubmit} className="mt-8 space-y-6 text-blue-100/90">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    Nombre *
                     <input
                       type="text"
-                      id="nombre"
                       name="nombre"
                       value={formData.nombre}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-blue-200/60 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300/60"
                       placeholder="Tu nombre"
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="apellido" className="block text-sm font-medium text-slate-700 mb-2">
-                      Apellido *
-                    </label>
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    Apellido *
                     <input
                       type="text"
-                      id="apellido"
                       name="apellido"
                       value={formData.apellido}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-blue-200/60 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300/60"
                       placeholder="Tu apellido"
                     />
-                  </div>
+                  </label>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-                      Correo Electrónico *
-                    </label>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    Correo Electrónico *
                     <input
                       type="email"
-                      id="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-blue-200/60 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300/60"
                       placeholder="tu@email.com"
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="telefono" className="block text-sm font-medium text-slate-700 mb-2">
-                      Teléfono *
-                    </label>
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    Teléfono *
                     <input
                       type="tel"
-                      id="telefono"
                       name="telefono"
                       value={formData.telefono}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-blue-200/60 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300/60"
                       placeholder="300 123 4567"
                     />
-                  </div>
+                  </label>
                 </div>
 
-                <div>
-                  <label htmlFor="tipoCaso" className="block text-sm font-medium text-slate-700 mb-2">
-                    Tipo de Caso *
-                  </label>
+                <label className="flex flex-col gap-2 text-sm font-medium">
+                  Tipo de Caso *
                   <select
-                    id="tipoCaso"
                     name="tipoCaso"
                     value={formData.tipoCaso}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300/60"
                   >
-                    <option value="">Selecciona el tipo de caso</option>
+                    <option value="" className="bg-slate-900 text-white">Selecciona el tipo de caso</option>
                     {tiposCaso.map((tipo) => (
-                      <option key={tipo} value={tipo}>{tipo}</option>
+                      <option key={tipo} value={tipo} className="bg-slate-900 text-white">
+                        {tipo}
+                      </option>
                     ))}
                   </select>
-                </div>
+                </label>
 
-                <div>
-                  <label htmlFor="mensaje" className="block text-sm font-medium text-slate-700 mb-2">
-                    Describe tu Caso *
-                  </label>
+                <label className="flex flex-col gap-2 text-sm font-medium">
+                  Describe tu Caso *
                   <textarea
-                    id="mensaje"
                     name="mensaje"
                     value={formData.mensaje}
                     onChange={handleChange}
                     required
                     rows={5}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-blue-200/60 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300/60"
                     placeholder="Cuéntanos los detalles de tu caso..."
                   />
-                </div>
+                </label>
 
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 px-6 py-4 text-sm font-semibold text-white shadow-[0_20px_45px_rgba(37,99,235,0.35)] transition hover:from-blue-400 hover:via-indigo-500 hover:to-blue-400 hover:shadow-[0_25px_60px_rgba(37,99,235,0.45)]"
                 >
-                  <Send className="h-5 w-5 mr-2" />
-                  Enviar Consulta
+                  <Send className="h-5 w-5" /> Enviar Consulta
                 </button>
               </form>
             </div>
 
-            {/* Contact Information */}
             <div className="space-y-8">
-              {/* Direct Contact */}
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <h3 className="text-2xl font-bold text-slate-900 mb-6">
-                  Información de Contacto Directo
-                </h3>
-                
-                <div className="space-y-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-blue-100 rounded-lg p-3">
-                      <Phone className="h-6 w-6 text-blue-600" />
+              <div className="rounded-3xl border border-white/10 bg-slate-950/60 p-10 shadow-[0_30px_70px_rgba(15,23,42,0.45)] backdrop-blur">
+                <h3 className="text-2xl font-bold text-white">Información de Contacto Directo</h3>
+                <div className="mt-8 space-y-6 text-sm text-blue-100/90">
+                  <div className="flex items-start gap-4 rounded-2xl border border-white/5 bg-white/5 p-4">
+                    <div className="rounded-xl border border-blue-200/40 bg-blue-500/20 p-2">
+                      <Phone className="h-5 w-5 text-blue-100" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-900 mb-1">Teléfono</h4>
-                      <p className="text-slate-600">(+57) 300 123 4567</p>
-                      <p className="text-sm text-slate-500">Línea directa 24/7</p>
+                      <p className="font-semibold text-white">Teléfono</p>
+                      <p>(+57) 300 123 4567</p>
+                      <p className="text-xs text-blue-200/70">Línea directa 24/7</p>
                     </div>
                   </div>
-
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-green-100 rounded-lg p-3">
-                      <MessageCircle className="h-6 w-6 text-green-600" />
+                  <div className="flex items-start gap-4 rounded-2xl border border-white/5 bg-white/5 p-4">
+                    <div className="rounded-xl border border-green-200/40 bg-green-500/20 p-2">
+                      <MessageCircle className="h-5 w-5 text-green-100" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-900 mb-1">WhatsApp</h4>
-                      <a 
-                        href="https://wa.me/573001234567" 
-                        target="_blank" 
+                      <p className="font-semibold text-white">WhatsApp</p>
+                      <a
+                        href="https://wa.me/573001234567"
+                        target="_blank"
                         rel="noopener noreferrer"
-                        className="text-green-600 hover:text-green-700 transition-colors duration-200"
+                        className="text-green-200 hover:text-green-100"
                       >
                         Enviar mensaje
                       </a>
-                      <p className="text-sm text-slate-500">Respuesta inmediata</p>
+                      <p className="text-xs text-blue-200/70">Respuesta inmediata</p>
                     </div>
                   </div>
-
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-purple-100 rounded-lg p-3">
-                      <Mail className="h-6 w-6 text-purple-600" />
+                  <div className="flex items-start gap-4 rounded-2xl border border-white/5 bg-white/5 p-4">
+                    <div className="rounded-xl border border-purple-200/40 bg-purple-500/20 p-2">
+                      <Mail className="h-5 w-5 text-purple-100" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-900 mb-1">Email</h4>
-                      <p className="text-slate-600">info@prosejurix.com</p>
-                      <p className="text-sm text-slate-500">Respuesta en 24 horas</p>
+                      <p className="font-semibold text-white">Email</p>
+                      <p>info@prosejurix.com</p>
+                      <p className="text-xs text-blue-200/70">Respuesta en 24 horas</p>
                     </div>
                   </div>
-
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-orange-100 rounded-lg p-3">
-                      <MapPin className="h-6 w-6 text-orange-600" />
+                  <div className="flex items-start gap-4 rounded-2xl border border-white/5 bg-white/5 p-4">
+                    <div className="rounded-xl border border-amber-200/40 bg-amber-500/20 p-2">
+                      <MapPin className="h-5 w-5 text-amber-100" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-900 mb-1">Dirección</h4>
-                      <p className="text-slate-600">
-                        Carrera 23 #58-42, Oficina 301<br />
+                      <p className="font-semibold text-white">Dirección</p>
+                      <p>
+                        Carrera 23 #58-42, Oficina 301
+                        <br />
                         Manizales, Caldas, Colombia
                       </p>
                     </div>
@@ -257,41 +230,33 @@ const Contact = () => {
                 </div>
               </div>
 
-              {/* Business Hours */}
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <h3 className="text-2xl font-bold text-slate-900 mb-6">
-                  Horarios de Atención
-                </h3>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <Clock className="h-5 w-5 text-blue-600" />
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-blue-100 shadow-[0_30px_70px_rgba(15,23,42,0.4)] backdrop-blur">
+                <h3 className="text-2xl font-bold text-white">Horarios de Atención</h3>
+                <div className="mt-6 space-y-4 text-sm">
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-5 w-5 text-blue-200" />
                     <div>
-                      <p className="font-semibold text-slate-900">Lunes - Viernes</p>
-                      <p className="text-slate-600">8:00 AM - 6:00 PM</p>
+                      <p className="font-semibold text-white">Lunes - Viernes</p>
+                      <p>8:00 AM - 6:00 PM</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Clock className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-5 w-5 text-blue-200" />
                     <div>
-                      <p className="font-semibold text-slate-900">Sábados</p>
-                      <p className="text-slate-600">9:00 AM - 1:00 PM</p>
+                      <p className="font-semibold text-white">Sábados</p>
+                      <p>9:00 AM - 1:00 PM</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Clock className="h-5 w-5 text-slate-600" />
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-5 w-5 text-blue-200/70" />
                     <div>
-                      <p className="font-semibold text-slate-900">Domingos</p>
-                      <p className="text-slate-600">Cerrado</p>
+                      <p className="font-semibold text-white">Domingos</p>
+                      <p>Cerrado</p>
                     </div>
                   </div>
                 </div>
-
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Emergencias:</strong> Para casos urgentes, contáctanos por WhatsApp 
-                    las 24 horas del día.
-                  </p>
+                <div className="mt-6 rounded-2xl border border-blue-300/30 bg-blue-500/10 px-4 py-3 text-xs text-blue-100/80">
+                  <strong>Emergencias:</strong> Para casos urgentes, contáctanos por WhatsApp las 24 horas del día.
                 </div>
               </div>
             </div>
@@ -299,62 +264,49 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* Map Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">
-              Nuestra Ubicación
-            </h2>
-            <p className="text-xl text-slate-600">
-              Visítanos en nuestras oficinas en el centro de Manizales
-            </p>
+      <section className="relative py-24">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/0 via-white/8 to-white/0" />
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center text-white">
+            <h2 className="text-3xl font-bold sm:text-4xl">Nuestra Ubicación</h2>
+            <p className="mt-4 text-lg text-blue-100">Visítanos en nuestras oficinas en el centro de Manizales</p>
           </div>
-          
-          <div className="bg-slate-200 rounded-xl h-96 flex items-center justify-center">
-            <div className="text-center">
-              <MapPin className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600 text-lg">
-                Mapa de Google Maps se integrará aquí
-              </p>
-              <p className="text-slate-500">
-                Carrera 23 #58-42, Oficina 301, Manizales, Caldas
-              </p>
+          <div className="mt-10 flex items-center justify-center rounded-3xl border border-white/10 bg-slate-950/70 p-10 text-center text-blue-100 shadow-[0_35px_80px_rgba(15,23,42,0.45)] backdrop-blur">
+            <div>
+              <MapPin className="mx-auto h-16 w-16 text-blue-200" />
+              <p className="mt-4 text-lg">Mapa de Google Maps se integrará aquí</p>
+              <p className="text-sm text-blue-200/80">Carrera 23 #58-42, Oficina 301, Manizales, Caldas</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-blue-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">
-            ¿Prefieres Hablar Directamente?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8">
+      <section className="relative pb-24 pt-8">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/0 via-white/14 to-white/8" />
+        <div className="mx-auto max-w-4xl rounded-3xl border border-white/10 bg-gradient-to-r from-blue-600/40 via-indigo-600/40 to-blue-600/40 px-6 py-16 text-center shadow-[0_35px_80px_rgba(15,23,42,0.55)] backdrop-blur sm:px-12">
+          <h2 className="text-3xl font-bold text-white sm:text-4xl">¿Prefieres Hablar Directamente?</h2>
+          <p className="mt-4 text-lg text-blue-100">
             Llámanos ahora para una consulta inmediata o agenda una cita presencial.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
             <a
               href="tel:+573001234567"
-              className="bg-yellow-500 text-slate-900 px-8 py-4 rounded-lg font-bold text-lg hover:bg-yellow-400 transition-colors duration-200 flex items-center justify-center"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-blue-700 shadow-lg shadow-white/20 transition hover:-translate-y-0.5 hover:bg-blue-50"
             >
-              <Phone className="h-5 w-5 mr-2" />
-              Llamar Ahora
+              <Phone className="h-5 w-5" /> Llamar Ahora
             </a>
             <a
               href="https://wa.me/573001234567"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-green-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors duration-200 flex items-center justify-center"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-8 py-4 text-base font-semibold text-white transition hover:border-white/60 hover:bg-white/10"
             >
-              <MessageCircle className="h-5 w-5 mr-2" />
-              WhatsApp
+              <MessageCircle className="h-5 w-5" /> WhatsApp
             </a>
           </div>
         </div>
       </section>
-    </div>
+    </LandingLayout>
   );
 };
 
