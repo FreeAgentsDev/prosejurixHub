@@ -21,57 +21,57 @@ const DashboardCards = ({
       title: 'Total Procesos',
       value: totalProcesos,
       icon: FileText,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-600'
+      gradient: 'from-sky-500 via-blue-500 to-indigo-500'
     },
     {
       title: 'Procesos Activos',
       value: procesosActivos,
       icon: Clock,
-      color: 'bg-yellow-500',
-      bgColor: 'bg-yellow-50',
-      textColor: 'text-yellow-600'
+      gradient: 'from-amber-500 via-orange-500 to-rose-500'
     },
     {
       title: 'En Negociación',
       value: procesosEnNegociacion,
       icon: TrendingUp,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-600'
+      gradient: 'from-fuchsia-500 via-purple-500 to-blue-600'
     },
     {
       title: 'En Revisión',
       value: procesosEnRevision,
       icon: Eye,
-      color: 'bg-orange-500',
-      bgColor: 'bg-orange-50',
-      textColor: 'text-orange-600'
+      gradient: 'from-lime-500 via-emerald-500 to-teal-500'
     },
     {
       title: 'Finalizados',
       value: procesosFinalizados,
       icon: CheckCircle,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-600'
+      gradient: 'from-emerald-500 via-green-500 to-teal-500'
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-10">
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (
-          <div key={index} className={`${card.bgColor} rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow`}>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-slate-600 text-xs sm:text-sm font-medium mb-1">{card.title}</p>
-                <p className={`text-2xl sm:text-3xl font-bold ${card.textColor}`}>{card.value}</p>
+          <div
+            key={index}
+            className="group relative overflow-hidden rounded-3xl bg-white/70 p-1 shadow-lg shadow-slate-900/5 transition hover:-translate-y-1 hover:shadow-xl"
+          >
+            <div className={`relative flex h-full flex-col rounded-3xl bg-gradient-to-br ${card.gradient} p-5 text-white`}>
+              <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-3xl transition group-hover:scale-125" />
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/70">{card.title}</p>
+                  <p className="mt-2 text-3xl font-semibold leading-none sm:text-4xl">{card.value}</p>
+                </div>
+                <div className="rounded-2xl bg-white/15 p-3 shadow-inner backdrop-blur-sm">
+                  <Icon className="h-6 w-6 text-white" />
+                </div>
               </div>
-              <div className={`${card.color} rounded-lg p-2 sm:p-3 flex-shrink-0`}>
-                <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="mt-6 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.25em] text-white/60">
+                <span className="inline-flex h-1.5 w-12 rounded-full bg-white/40 transition-all group-hover:w-16" />
+                Gestión Prosejurix
               </div>
             </div>
           </div>

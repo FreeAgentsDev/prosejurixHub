@@ -2,26 +2,17 @@
 
 ## 📋 Variables de Entorno Requeridas
 
-Para que el servidor API funcione correctamente, necesitas configurar las siguientes variables de entorno.
+La aplicación se conecta directamente a Supabase desde el frontend, por lo que solo necesitas exponer la URL del proyecto y la clave pública (`anon key`).
 
-### 1. Crear archivo `.env.local`
+### 1. Crear archivo `.env`
 
-En la raíz del proyecto, crea un archivo llamado `.env.local` (este archivo NO se sube a Git).
+En la raíz del proyecto (misma carpeta donde está `package.json`), crea un archivo llamado `.env`.
 
-### 2. Contenido del archivo `.env.local`
+### 2. Contenido del archivo `.env`
 
 ```env
-# Supabase Configuration
-# URL de tu proyecto Supabase
-SUPABASE_URL=https://your-project-ref.supabase.co
-
-# Service Role Key (NUNCA exponer en el cliente)
-# Esta clave tiene permisos administrativos completos
-# ⚠️ Obtén esta clave desde: Supabase Dashboard > Settings > API > service_role key
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvdXItcHJvamVjdC1yZWYiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNjQxOTY1MjAwLCJleHAiOjE5NTc1NDEyMDB9.your_service_role_key_here
-
-# Puerto del servidor API (opcional, default: 3001)
-PORT=3001
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_ANON_KEY=tu_clave_publica_anon
 ```
 
 ### 3. Cómo obtener las credenciales
@@ -30,37 +21,35 @@ PORT=3001
 2. Selecciona tu proyecto
 3. Ve a **Settings** > **API**
 4. Copia:
-   - **Project URL** → `SUPABASE_URL`
-   - **service_role key** (en la sección "Project API keys") → `SUPABASE_SERVICE_ROLE_KEY`
+   - **Project URL** → `VITE_SUPABASE_URL`
+   - **anon public key** → `VITE_SUPABASE_ANON_KEY`
 
 ### 4. ⚠️ Seguridad Importante
 
-- **NUNCA** subas el archivo `.env.local` a Git (ya está en `.gitignore`)
-- **NUNCA** uses la `service_role key` en el código del cliente (frontend)
-- **SOLO** usa la `service_role key` en el servidor backend
-- La `service_role key` tiene permisos administrativos completos y puede bypassear RLS
+- **NUNCA** expongas la `service_role key` en el frontend. Solo usa la **anon key** pública.
+- El archivo `.env` está en `.gitignore`; verifica que siga así si cambias el nombre.
+- Si cambias las credenciales, reinicia el servidor de desarrollo (`npm run dev`).
 
 ### 5. Verificar la configuración
 
-Después de crear el archivo `.env.local`, reinicia el servidor:
+Después de crear o actualizar el archivo `.env`, reinicia el servidor de desarrollo:
 
 ```bash
-npm run dev:server
+npm run dev
 ```
 
-El servidor debería iniciar sin errores. Si ves un error sobre variables de entorno no configuradas, verifica que:
+Si ves errores en la consola del navegador como `❌ Cliente de Supabase no inicializado`, revisa que:
 
-1. El archivo `.env.local` existe en la raíz del proyecto
-2. Las variables están escritas correctamente (sin espacios extra)
-3. No hay comillas alrededor de los valores (a menos que sean parte del valor)
+1. El archivo `.env` existe y está en la raíz del proyecto.
+2. Las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` tienen valores válidos.
+3. No hay espacios en blanco extra o comillas envolviendo los valores.
 
 ### 6. Ejemplo de valores reales
 
 ```env
-SUPABASE_URL=https://laguwzscrdoqndzzdlpj.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhZ3V3enNjcmRvcW5kenpkbHBqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTg2NTQ5OCwiZXhwIjoyMDc3NDQxNDk4fQ.actual_service_role_key_here
-PORT=3001
+VITE_SUPABASE_URL=https://laguwzscrdoqndzzdlpj.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhZ3V3enNjcmRvcW5kenpkbHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4NjU0OTgsImV4cCI6MjA3NzQ0MTQ5OH0.ne-8UYArE_g5iOpiVCF0LdpGLoz5oD3Edi9lpVaRVu0
 ```
 
-**Nota:** Los valores de ejemplo arriba son placeholders. Reemplázalos con tus credenciales reales.
+> **Nota:** Los valores anteriores son de ejemplo. Reemplázalos por las credenciales reales de tu proyecto.
 

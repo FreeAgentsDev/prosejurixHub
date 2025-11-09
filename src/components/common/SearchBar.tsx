@@ -12,18 +12,20 @@ interface SearchBarProps {
 const SearchBar = ({ placeholder = 'Buscar...', value, onChange, className = '', showClear = true }: SearchBarProps) => {
   return (
     <div className={`relative flex-1 max-w-md ${className}`}>
-      <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+      <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-blue-50 p-2 text-blue-500 shadow-sm">
+        <Search className="h-4 w-4" />
+      </div>
       <input
         type="text"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-10 pr-10 py-2 w-full border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+        className="w-full rounded-2xl border border-transparent bg-white/80 pl-12 pr-12 py-3 text-sm font-medium text-slate-600 shadow-sm transition focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 placeholder:text-slate-400"
       />
       {showClear && value && (
         <button
           onClick={() => onChange('')}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-slate-100 p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-600"
           title="Limpiar búsqueda"
         >
           <X className="h-4 w-4" />

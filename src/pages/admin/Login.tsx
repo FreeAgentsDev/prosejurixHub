@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import AdminLoginForm from '../../components/admin/AdminLoginForm';
 import LoadingChecklist from '../../components/common/LoadingChecklist';
+import { useNotifications } from '../../components/common/NotificationProvider';
 
 interface ChecklistItem {
   id: string;
@@ -19,6 +20,7 @@ const AdminLogin = () => {
     { id: '3', label: 'Inicializando sistema...', status: 'pending' },
     { id: '4', label: 'Preparando panel administrativo...', status: 'pending' },
   ]);
+  const { notify } = useNotifications();
 
   const updateChecklistItem = (id: string, status: ChecklistItem['status']) => {
     setChecklistItems(items =>
@@ -29,7 +31,11 @@ const AdminLogin = () => {
   const handleLogin = async (usuario: string, password: string) => {
     // Validar credenciales
     if (usuario !== 'admin' || password !== 'prosejurix2024') {
-      alert('Credenciales incorrectas. Use: admin / prosejurix2024');
+      notify({
+        type: 'warning',
+        title: 'Credenciales incorrectas',
+        message: 'Usa admin / prosejurix2024 para ingresar.'
+      });
       return;
     }
 
@@ -60,11 +66,15 @@ const AdminLogin = () => {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // Navegar al dashboard
-      navigate('/admin/dashboard');
+      navigate('/admin/procesos');
     } catch (error) {
       console.error('Error en login:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      alert(`Error al iniciar sesión: ${errorMessage}`);
+      notify({
+        type: 'error',
+        title: 'Error al iniciar sesión',
+        message: errorMessage
+      });
       
       // Marcar el paso actual como error
       const currentItem = checklistItems.find(item => item.status === 'loading');

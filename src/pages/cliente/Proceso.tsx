@@ -27,14 +27,16 @@ const ClienteProceso = () => {
   const clienteNombre = primerProceso.NOMBRE || primerProceso.nombre || primerProceso.Nombre || primerProceso.cliente_nombre || 'Cliente';
   
   // Buscar cédula con diferentes posibles nombres de columna
-  const clienteCedula = primerProceso['CÉDULA / NIT'] || primerProceso['CÉDULA_NIT'] || primerProceso.cedula || primerProceso.CEDULA || primerProceso.nit || '';
+  const clienteCedula = primerProceso.CEDULA || primerProceso.cedula || primerProceso.Cedula || primerProceso['CÉDULA'] || primerProceso.nit || '';
 
   // Transformar procesos de Supabase para el componente (mapeando campos del CSV)
-  const procesosFormateados = procesos.map((proc: any) => {
-    // Priorizar proceso_id (ID del proceso) sobre otros campos
-    const procId = proc.proceso_id || proc.procesoId || proc['PROCESO_ID'] || 
-                   proc.ID || proc.id || proc.Id || 
-                   `PROC-${proc.ID || proc.id || 'N/A'}`;
+  const procesosFormateados = procesos.map((proc: any, index: number) => {
+    // Obtener el ID del proceso desde posibles columnas
+    const procId =
+      proc.ID || proc.id || proc.Id ||
+      proc['Proceso ID'] || proc['ID Proceso'] || proc['id_proceso'] ||
+      proc.uuid || proc.uuid_proceso ||
+      `ID-${index + 1}`;
     
     // Buscar estado con diferentes posibles nombres
     const estado = proc.Estado || proc.estado || proc.ESTADO || proc.estado_publico || 'Sin estado';
@@ -54,9 +56,11 @@ const ClienteProceso = () => {
                          `Proceso radicado: ${proc.RADICADO || proc.radicado || 'N/A'}` ||
                          'Sin observaciones disponibles.';
 
+    const resolvedId = String(procId);
+
     return {
-      id: String(procId), // ID del proceso (proceso_id)
-      procesoId: String(procId), // Guardar también como procesoId para búsquedas
+      id: resolvedId,
+      procesoId: resolvedId, // Guardar también como procesoId para búsquedas
       estado: String(estado),
       observaciones: String(observaciones),
       fechaIngreso: String(fecha),

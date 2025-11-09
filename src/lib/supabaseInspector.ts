@@ -50,23 +50,21 @@ export async function detectTableAndIdType(): Promise<TableInfo> {
     console.log('📋 Columnas disponibles:', Object.keys(sampleRecord));
     console.log('📄 Registro de muestra:', sampleRecord);
 
-    // Detectar columna de ID
-    // Prioridad: 'id' (numérico), luego 'ID', luego 'proceso_id'
-    let idColumnName = 'id';
-    let idColumnValue = sampleRecord.id;
-    
-    if (idColumnValue === undefined || idColumnValue === null) {
-      // Intentar con 'ID' en mayúsculas
-      if (sampleRecord.ID !== undefined && sampleRecord.ID !== null) {
-        idColumnName = 'ID';
-        idColumnValue = sampleRecord.ID;
-      } else if (sampleRecord.proceso_id !== undefined && sampleRecord.proceso_id !== null) {
-        // Si no hay id numérico, usar proceso_id como alternativa
-        idColumnName = 'proceso_id';
-        idColumnValue = sampleRecord.proceso_id;
-      } else {
-        throw new Error(`No se encontró columna de ID en la tabla. Columnas disponibles: ${Object.keys(sampleRecord).join(', ')}`);
+    // Detectar columna de ID priorizando variaciones comunes de "ID"
+    const idCandidates = ['id', 'ID', 'Id'];
+    let idColumnName: string | null = null;
+    let idColumnValue: any = null;
+
+    for (const candidate of idCandidates) {
+      if (sampleRecord[candidate] !== undefined && sampleRecord[candidate] !== null) {
+        idColumnName = candidate;
+        idColumnValue = sampleRecord[candidate];
+        break;
       }
+    }
+
+    if (idColumnName === null) {
+      throw new Error(`No se encontró una columna de ID (id/ID) en la tabla. Columnas disponibles: ${Object.keys(sampleRecord).join(', ')}`);
     }
 
     // Determinar tipo de ID

@@ -1,17 +1,16 @@
 // Tipos para la tabla CTRANTECEDENTES de Supabase
 export interface ControlProcesoAntecedente {
   id?: number;
+  ID?: number | string;
   cliente_id?: number;
   cliente_nombre?: string;
   cedula?: string;
-  proceso_id?: string;
   estado?: string;
   estado_publico?: string;
   tipo?: string;
   fecha?: string;
   fecha_ingreso?: string;
   demandado?: string;
-  codigo_acceso?: string;
   observaciones?: string;
   observaciones_internas?: string;
   observaciones_cliente?: string;

@@ -55,52 +55,29 @@ const ProcesoDetalleCliente = () => {
       try {
         let procesoData = null;
 
-        // SIEMPRE buscar en Supabase para obtener los datos más actualizados
+        // Buscar en Supabase para obtener los datos más actualizados
         if (supabase) {
-          // Detectar tabla y tipo de ID
           const tableInfo = await detectTableAndIdType();
-          console.log('📡 Buscando en Supabase por proceso_id:', decodedId);
-          
-          // Prioridad 1: Buscar por proceso_id (si existe)
-          const { data: foundByProcesoId, error: errorProcesoId } = await supabase
+          let searchValue: string | number = decodedId;
+          if (tableInfo.idType === 'number') {
+            const numericId = Number(decodedId);
+            if (Number.isNaN(numericId)) {
+              throw new Error(`El ID "${decodedId}" no es válido. Se esperaba un número.`);
+            }
+            searchValue = numericId;
+          }
+
+          console.log(`📡 Buscando en Supabase por ${tableInfo.idColumnName}:`, searchValue);
+
+          const { data: foundById, error: errorById } = await supabase
             .from(tableInfo.tableName)
             .select('*')
-            .eq('proceso_id', decodedId)
+            .eq(tableInfo.idColumnName, searchValue)
             .maybeSingle();
-          
-          if (foundByProcesoId && !errorProcesoId) {
-            console.log('✅ Proceso encontrado por proceso_id:', foundByProcesoId);
-            procesoData = foundByProcesoId;
-          } else {
-            // Prioridad 2: Si no se encuentra por proceso_id, intentar por id según su tipo
-            console.log('⚠️ No encontrado por proceso_id, intentando por columna ID');
-            
-            // Convertir el ID al tipo correcto según la detección
-            let searchId: number | string = decodedId;
-            if (tableInfo.idType === 'number') {
-              const numericId = Number(decodedId);
-              if (!isNaN(numericId)) {
-                searchId = numericId;
-                console.log(`📡 Buscando por ${tableInfo.idColumnName} (numérico):`, searchId);
-              } else {
-                console.log('⚠️ ID no es numérico, no se puede buscar por columna numérica');
-                searchId = decodedId; // Mantener como string
-              }
-            } else {
-              searchId = String(decodedId);
-              console.log(`📡 Buscando por ${tableInfo.idColumnName} (string):`, searchId);
-            }
-            
-            const { data: foundById, error: errorId } = await supabase
-              .from(tableInfo.tableName)
-              .select('*')
-              .eq(tableInfo.idColumnName, searchId)
-              .maybeSingle();
-            
-            if (foundById && !errorId) {
-              console.log('✅ Proceso encontrado por columna ID:', foundById);
-              procesoData = foundById;
-            }
+
+          if (foundById && !errorById) {
+            console.log('✅ Proceso encontrado por ID:', foundById);
+            procesoData = foundById;
           }
         }
 
@@ -108,10 +85,9 @@ const ProcesoDetalleCliente = () => {
         if (!procesoData && procesosFromState && Array.isArray(procesosFromState)) {
           console.log('⚠️ No encontrado en Supabase, usando datos del estado de navegación');
           procesoData = procesosFromState.find((p: any) => {
-            const procId = getValue(p, 'proceso_id', 'procesoId', 'PROCESO_ID', 'ID', 'id', 'Id');
+            const procId = getValue(p, 'ID', 'id', 'Id');
             const procIdStr = procId ? String(procId) : '';
-            return String(procIdStr) === String(decodedId) ||
-                   (String(decodedId).startsWith('PROC-') && String(decodedId).replace('PROC-', '') === procIdStr);
+            return String(procIdStr) === String(decodedId);
           });
         }
 
@@ -180,9 +156,9 @@ const ProcesoDetalleCliente = () => {
   }
 
   // Obtener valores usando los helpers
-  const procesoId = getValue(proceso, 'proceso_id', 'procesoId', 'Proceso ID', 'ID', 'id', 'Id') || id;
+  const procesoId = getValue(proceso, 'ID', 'id', 'Id') || id;
   const clienteNombre = getValue(proceso, 'NOMBRE', 'nombre', 'Nombre', 'cliente_nombre', 'clienteNombre', 'Cliente Nombre') || 'Cliente';
-  const cedula = getValue(proceso, 'CÉDULA / NIT', 'CÉDULA_NIT', 'cedula_nit', 'cedula', 'Cedula', 'CEDULA', 'nit', 'NIT') || '';
+  const cedula = getValue(proceso, 'CEDULA', 'cedula', 'Cedula', 'CÉDULA', 'nit', 'NIT') || '';
   const estado = getValue(proceso, 'Estado', 'estado', 'ESTADO', 'estado_publico', 'estadoPublico') || 'Sin estado';
   const tipo = getValue(proceso, 'CLASE DE PROCESO', 'CLASE_DE_PROCESO', 'clase_proceso', 'tipo', 'Tipo') || 'Sin tipo';
   const fechaIngreso = getValue(proceso, 'FECHA DE INGRESO', 'fecha_ingreso', 'fechaIngreso', 'Fecha Ingreso', 'created_at') || '';
@@ -190,7 +166,6 @@ const ProcesoDetalleCliente = () => {
   const observaciones = getValue(proceso, 'observaciones', 'Observaciones', 'OBSERVACIONES', 'observaciones_cliente', 'OBSERVACIONES_CLIENTE') || '';
   const demandado = getValue(proceso, 'demandado', 'Demandado', 'DEMANDADO') || '';
   const juzgado = getValue(proceso, 'juzgado', 'Juzgado', 'JUZGADO') || '';
-  const codigoAcceso = getValue(proceso, 'codigo_acceso', 'codigoAcceso', 'Código Acceso', 'CODIGO_ACCESO') || '';
   const radicado = getValue(proceso, 'RADICADO', 'radicado', 'Radicado') || '';
   
   // Campos adicionales
@@ -211,14 +186,14 @@ const ProcesoDetalleCliente = () => {
     .filter(([key]) => {
       const k = key.toLowerCase();
       return ![
-        'id', 'proceso_id', 'procesoid', 'nombre', 'cliente_nombre', 'clientenombre',
+        'id', 'nombre', 'cliente_nombre', 'clientenombre',
         'cédula', 'cedula', 'nit', 'cédula / nit', 'cedula_nit',
         'estado', 'estado_publico', 'estadopublico',
         'clase de proceso', 'clase_de_proceso', 'tipoproceso', 'tipo',
         'fecha de ingreso', 'fecha_ingreso', 'fechaingreso', 'created_at',
         'fecha de accidente', 'fecha_de_accidente', 'fechaaccidente', 'fecha',
         'observaciones', 'observaciones_cliente', 'observacionescliente',
-        'demandado', 'juzgado', 'codigo_acceso', 'codigoacceso',
+        'demandado', 'juzgado',
         'radicado', 'celular', 'telefono', 'correo', 'email',
         'direccion', 'dirección', 'ciudad', 'placa_vehiculo', 'placavehiculo', 'placa',
         'valor_honorarios', 'valorhonorarios', 'honorarios',
@@ -349,15 +324,6 @@ const ProcesoDetalleCliente = () => {
                     <p className="text-sm text-slate-900 font-mono">{String(procesoId)}</p>
                   </div>
                 </div>
-                {codigoAcceso && (
-                  <div className="flex items-start space-x-3">
-                    <Tag className="h-5 w-5 text-blue-600 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-slate-500">Código de Acceso</p>
-                      <p className="text-sm text-slate-900 font-mono bg-slate-50 px-2 py-1 rounded">{codigoAcceso}</p>
-                    </div>
-                  </div>
-                )}
                 <div className="flex items-start space-x-3">
                   <Tag className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div className="flex-1">

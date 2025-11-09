@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { mockProcesos, MockProceso } from '../data/mocks';
+import { MockProceso } from '../data/mocks';
 import { supabase } from '../lib/supabase';
-import { ControlProcesoAntecedente } from '../types/supabase';
-import * as api from '../services/api';
 import { detectTableAndIdType, TableInfo } from '../lib/supabaseInspector';
 
 // Función helper para obtener un valor de un objeto usando múltiples posibles nombres de claves
@@ -15,21 +13,72 @@ const getValue = (obj: any, ...keys: string[]): any => {
   return null;
 };
 
+const normalizeKey = (key: string): string =>
+  String(key)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, '');
+
+const resolveColumnName = (sampleRecord: any, candidates: string[]): string | null => {
+  if (!sampleRecord) return null;
+
+  const recordKeys = Object.keys(sampleRecord);
+
+  for (const candidate of candidates) {
+    if (recordKeys.includes(candidate)) {
+      return candidate;
+    }
+  }
+
+  const normalizedKeysMap = new Map<string, string>();
+  for (const key of recordKeys) {
+    normalizedKeysMap.set(normalizeKey(key), key);
+  }
+
+  for (const candidate of candidates) {
+    const normalizedCandidate = normalizeKey(candidate);
+    if (normalizedKeysMap.has(normalizedCandidate)) {
+      return normalizedKeysMap.get(normalizedCandidate)!;
+    }
+  }
+
+  return null;
+};
+
 // Función para transformar datos de Supabase al formato MockProceso
 // Esta función es flexible y detecta automáticamente los nombres de columnas
 export const transformSupabaseToMock = (data: any): MockProceso => {
   // Detectar nombres de columnas automáticamente
-  const id = getValue(data, 'proceso_id', 'procesoId', 'Proceso ID', 'id') || `PROC-${data.id || Math.random().toString(36).substr(2, 9)}`;
+  const idValue = getValue(data, 'ID', 'id', 'Id');
+  if (idValue === null || idValue === undefined) {
+    throw new Error('No se encontró la columna "ID" en el registro de Supabase.');
+  }
+  const id = String(idValue);
   const cedula = getValue(data, 'cedula', 'Cedula', 'CÉDULA', 'cedula_cliente') || '';
   const estado = (getValue(data, 'estado', 'Estado', 'estado_interno') as 'activo' | 'finalizado' | 'en_espera') || 'activo';
   const estadoPublico = getValue(data, 'estado_publico', 'estadoPublico', 'Estado Publico', 'Estado Público', 'estado_para_cliente') || 'Evaluación Inicial';
+  const estadoProceso = getValue(data, 'estado_proceso', 'Estado Proceso', 'ESTADO PROCESO') || undefined;
   const tipo = (getValue(data, 'tipo', 'Tipo', 'tipo_proceso') as 'civil' | 'penal' | 'laboral' | 'comercial') || 'civil';
+  const claseProceso = getValue(data, 'clase_de_proceso', 'CLASE DE PROCESO', 'claseProceso', 'CLASE PROCESO') || undefined;
+  const responsabilidad = getValue(data, 'responsabilidad', 'Responsabilidad', 'RESPONSABILIDAD') || undefined;
   const fecha = getValue(data, 'fecha', 'Fecha', 'fecha_proceso') || new Date().toISOString().split('T')[0];
   const fechaIngreso = getValue(data, 'fecha_ingreso', 'fechaIngreso', 'Fecha Ingreso', 'Fecha de Ingreso', 'fecha_ingreso_proceso', 'created_at') || fecha;
-  const clienteNombre = getValue(data, 'cliente_nombre', 'clienteNombre', 'Cliente Nombre', 'Nombre Cliente', 'nombre_cliente', 'cliente', 'Nombre') || '';
-  const clienteId = getValue(data, 'cliente_id', 'clienteId', 'Cliente ID', 'id_cliente') || 0;
+  const clienteNombre =
+    getValue(
+      data,
+      'cliente_nombre',
+      'clienteNombre',
+      'Cliente Nombre',
+      'Nombre Cliente',
+      'nombre_cliente',
+      'cliente',
+      'Nombre',
+      'nombre',
+      'NOMBRE'
+    ) || '';
+  const clienteId = getValue(data, 'cliente_id', 'clienteId', 'Cliente ID', 'id_cliente', 'CLIENTE_ID', 'ID_CLIENTE') || 0;
   const demandado = getValue(data, 'demandado', 'Demandado', 'demandado_nombre') || '';
-  const codigoAcceso = getValue(data, 'codigo_acceso', 'codigoAcceso', 'Código Acceso', 'codigo', 'Codigo Acceso') || '';
   const observaciones = getValue(data, 'observaciones', 'Observaciones', 'observaciones_generales');
   const observacionesInternas = getValue(data, 'observaciones_internas', 'observacionesInternas', 'Observaciones Internas', 'notas_internas');
   const observacionesCliente = getValue(data, 'observaciones_cliente', 'observacionesCliente', 'Observaciones Cliente', 'notas_cliente');
@@ -37,32 +86,97 @@ export const transformSupabaseToMock = (data: any): MockProceso => {
   const placaVehiculo = getValue(data, 'placa_vehiculo', 'placaVehiculo', 'Placa Vehículo', 'placa', 'Placa');
   const valorHonorarios = getValue(data, 'valor_honorarios', 'valorHonorarios', 'Valor Honorarios', 'honorarios');
   const valorPeritaje = getValue(data, 'valor_peritaje', 'valorPeritaje', 'Valor Peritaje', 'peritaje');
-  const valorPrestamos = getValue(data, 'valor_prestamos', 'valorPrestamos', 'Valor Préstamos', 'prestamos');
+  const valorPrestamos = getValue(data, 'valor_prestamos', 'valorPrestamos', 'Valor Préstamos');
   const gastosAdicionales = getValue(data, 'gastos_adicionales', 'gastosAdicionales', 'Gastos Adicionales', 'gastos');
   const fechaRadicacion = getValue(data, 'fecha_radicacion', 'fechaRadicacion', 'Fecha Radicación', 'Fecha de Radicación');
+  const radicado = getValue(data, 'radicado', 'Radicado', 'RADICADO');
+  const fechaAccidente = getValue(data, 'fecha_accidente', 'Fecha Accidente', 'FECHA DE ACCIDENTE') || undefined;
+  const caducidad = getValue(data, 'caducidad', 'Caducidad', 'CADUCIDAD') || undefined;
+  const lugarAccidente = getValue(data, 'lugar_accidente', 'Lugar Accidente', 'LUGAR DE ACCIDENTE') || undefined;
+  const ciudad1 = getValue(data, 'ciudad_1', 'Ciudad_1', 'CIUDAD_1') || undefined;
+  const fechaQuerella = getValue(data, 'fecha_querella', 'Fecha Querella', 'FECHA QUERELLA') || undefined;
+  const fiscalia = getValue(data, 'fiscalia', 'Fiscalia', 'FÍSCALIA', 'FISCALIA') || undefined;
+  const ciudad2 = getValue(data, 'ciudad_2', 'Ciudad_2', 'CIUDAD_2') || undefined;
+  const ciudad3 = getValue(data, 'ciudad_3', 'Ciudad_3', 'CIUDAD_3') || undefined;
+  const aseguradora = getValue(data, 'aseguradora', 'Aseguradora', 'ASEGURADORA') || undefined;
+  const actuacion = getValue(data, 'actuacion', 'Actuacion', 'ACTUACIÓN', 'ACTUACION') || undefined;
+  const fechaReclamacion = getValue(data, 'fecha_reclamacion', 'Fecha Reclamación', 'FECHA RECLAMACIÓN', 'FECHA RECLAMACION') || undefined;
+  const conciliacion = getValue(data, 'conciliacion', 'Conciliacion', 'CONCILIACIÓN', 'CONCILIACION') || undefined;
+  const fechaPresentacionDemanda = getValue(
+    data,
+    'fecha_presentacion_demanda',
+    'Fecha Presentación Demanda',
+    'FECHA PRESENTACIÓN DEMANDA',
+    'FECHA PRESENTACION DEMANDA'
+  ) || undefined;
+  const rama = getValue(data, 'rama', 'Rama', 'RAMA') || undefined;
+  const radicado1 = getValue(data, 'radicado_1', 'RADICADO_1', 'Radicado_1') || undefined;
+  const prestamos = getValue(data, 'prestamos', 'PRESTAMOS') || undefined;
+  const celular = getValue(data, 'celular', 'Celular', 'CELULAR') || undefined;
+  const celularSecundario = getValue(data, 'celular_1', 'Celular_1', 'CELULAR_1', 'CELULAR 1') || undefined;
+  const telefono = getValue(data, 'telefono', 'Teléfono', 'Telefono', 'TELÉFONO') || undefined;
+  const correoElectronico =
+    getValue(
+      data,
+      'correo_electronico',
+      'Correo Electronico',
+      'CORREO ELECTRÓNICO',
+      'CORREO ELECTRONICO',
+      'correo',
+      'Correo',
+      'email',
+      'EMAIL'
+    ) || undefined;
+  const direccion = getValue(data, 'direccion', 'Dirección', 'DIRECCIÓN', 'DIRECCION') || undefined;
+  const ciudad = getValue(data, 'ciudad', 'Ciudad', 'CIUDAD') || undefined;
 
   return {
     id: String(id),
     cedula,
     estado,
     estadoPublico,
+    estadoProceso,
     tipo,
+    claseProceso,
+    responsabilidad,
     fecha,
     fechaIngreso,
+    fechaAccidente,
+    caducidad,
+    lugarAccidente,
     clienteNombre,
     clienteId: Number(clienteId),
     demandado,
-    codigoAcceso,
     observaciones,
     observacionesInternas,
     observacionesCliente,
     juzgado,
+    rama,
     placaVehiculo,
     valorHonorarios: valorHonorarios ? Number(valorHonorarios) : undefined,
     valorPeritaje: valorPeritaje ? Number(valorPeritaje) : undefined,
     valorPrestamos: valorPrestamos ? Number(valorPrestamos) : undefined,
     gastosAdicionales: gastosAdicionales ? Number(gastosAdicionales) : undefined,
-    fechaRadicacion
+    fechaRadicacion,
+    radicado,
+    ciudad,
+    ciudad1,
+    ciudad2,
+    ciudad3,
+    fechaQuerella,
+    fiscalia,
+    aseguradora,
+    actuacion,
+    fechaReclamacion,
+    conciliacion,
+    fechaPresentacionDemanda,
+    radicado1,
+    prestamos,
+    celular,
+    celularSecundario,
+    telefono,
+    correoElectronico,
+    direccion
   };
 };
 
@@ -238,47 +352,125 @@ export const useProcesses = () => {
 
   const createProcess = async (processData: Omit<MockProceso, 'id'>) => {
     try {
-      // Generar proceso_id automáticamente si no existe
-      const procesoId = `PROC-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      if (!supabase) {
+        throw new Error('Cliente de Supabase no inicializado. Verifica tu archivo .env');
+      }
+
+      const info = await detectTableInfo();
+      const sampleRecord = info.sampleRecord || {};
       
       // Preparar datos para la API - incluir TODOS los campos de la tabla
-      const apiData: Omit<ControlProcesoAntecedente, 'id'> = {
-        cliente_id: processData.clienteId || undefined,
-        cliente_nombre: processData.clienteNombre || undefined,
-        cedula: processData.cedula || undefined,
-        proceso_id: procesoId, // Generado automáticamente
-        estado: processData.estado || undefined,
-        estado_publico: processData.estadoPublico || undefined,
-        tipo: processData.tipo || undefined,
-        fecha: processData.fecha || undefined,
-        fecha_ingreso: processData.fechaIngreso || undefined,
-        demandado: processData.demandado || undefined,
-        codigo_acceso: processData.codigoAcceso || undefined,
-        observaciones: processData.observaciones || undefined,
-        observaciones_internas: processData.observacionesInternas || undefined,
-        observaciones_cliente: processData.observacionesCliente || undefined,
-        juzgado: processData.juzgado || undefined,
-        placa_vehiculo: processData.placaVehiculo || undefined,
-        valor_honorarios: processData.valorHonorarios ?? undefined,
-        valor_peritaje: processData.valorPeritaje ?? undefined,
-        valor_prestamos: processData.valorPrestamos ?? undefined,
-        gastos_adicionales: processData.gastosAdicionales ?? undefined,
-        fecha_radicacion: processData.fechaRadicacion || undefined
+      const insertData: Record<string, any> = {};
+      const setField = (value: any, ...candidates: string[]) => {
+        if (value === undefined || value === null) return;
+        const key = resolveColumnName(sampleRecord, candidates);
+        if (!key) return;
+        insertData[key] = value;
       };
 
-      console.log('📝 Creando proceso a través de la API:', apiData);
+      const computeNextSequentialId = (): number => {
+        let maxId = 0;
+        const register = (value: any) => {
+          const numericValue = Number(value);
+          if (!Number.isNaN(numericValue) && numericValue > maxId) {
+            maxId = numericValue;
+          }
+        };
 
-      // Llamar a la API para crear el registro
-      const response = await api.createRecord(apiData);
-      
-      if (response.data) {
-        const newProcess = transformSupabaseToMock(response.data);
-        // Recargar todos los procesos
-        await refreshProcesses();
-        return newProcess;
+        if (procesosRaw && procesosRaw.length > 0) {
+          for (const record of procesosRaw) {
+            if (!record) continue;
+            const rawId =
+              (info.idColumnName && record[info.idColumnName] !== undefined)
+                ? record[info.idColumnName]
+                : getValue(record, 'ID', 'id', 'Id');
+            register(rawId);
+          }
+        } else if (procesos && procesos.length > 0) {
+          for (const proceso of procesos) {
+            register(proceso.id);
+          }
+        }
+
+        return maxId + 1;
+      };
+
+      const nextSequentialId = computeNextSequentialId();
+      if (info.idColumnName) {
+        insertData[info.idColumnName] =
+          info.idType === 'number' ? nextSequentialId : String(nextSequentialId);
+      } else {
+        const resolvedIdKey =
+          resolveColumnName(sampleRecord, ['ID', 'id', 'Id']) || 'ID';
+        insertData[resolvedIdKey] =
+          info.idType === 'number' ? nextSequentialId : String(nextSequentialId);
       }
-      
-      throw new Error('No se recibieron datos del servidor');
+
+      setField(processData.clienteNombre, 'cliente_nombre', 'CLIENTE_NOMBRE', 'NOMBRE_CLIENTE', 'NOMBRE');
+      setField(processData.cedula, 'cedula', 'CEDULA', 'CEDULA_NIT');
+      setField(processData.estado, 'estado', 'ESTADO', 'Estado');
+      setField(processData.estadoPublico, 'estado_publico', 'ESTADO_PUBLICO', 'ESTADO PUBLICO');
+      setField(processData.estadoProceso, 'estado_proceso', 'ESTADO PROCESO');
+      setField(processData.tipo, 'tipo', 'TIPO');
+      setField(processData.claseProceso, 'clase_de_proceso', 'CLASE DE PROCESO', 'CLASE PROCESO');
+      setField(processData.responsabilidad, 'responsabilidad', 'RESPONSABILIDAD');
+      setField(processData.fecha, 'fecha', 'FECHA');
+      setField(processData.fechaIngreso, 'fecha_ingreso', 'FECHA_INGRESO', 'FECHA DE INGRESO', 'CREATED_AT');
+      setField(processData.fechaAccidente, 'fecha_accidente', 'FECHA DE ACCIDENTE');
+      setField(processData.caducidad, 'caducidad', 'CADUCIDAD');
+      setField(processData.fechaQuerella, 'fecha_querella', 'FECHA QUERELLA');
+      setField(processData.demandado, 'demandado', 'DEMANDADO');
+      setField(processData.observaciones, 'observaciones', 'OBSERVACIONES');
+      setField(processData.observacionesInternas, 'observaciones_internas', 'OBSERVACIONES_INTERNAS');
+      setField(processData.observacionesCliente, 'observaciones_cliente', 'OBSERVACIONES_CLIENTE');
+      setField(processData.juzgado, 'juzgado', 'JUZGADO');
+      setField(processData.rama, 'rama', 'RAMA');
+      setField(processData.placaVehiculo, 'placa_vehiculo', 'PLACA_VEHICULO', 'PLACA');
+      setField(processData.valorHonorarios, 'valor_honorarios', 'VALOR_HONORARIOS', 'HONORARIOS');
+      setField(processData.valorPeritaje, 'valor_peritaje', 'VALOR_PERITAJE', 'PERITAJE');
+      setField(processData.valorPrestamos, 'valor_prestamos', 'VALOR_PRESTAMOS');
+      setField(processData.gastosAdicionales, 'gastos_adicionales', 'GASTOS_ADICIONALES', 'GASTOS');
+      setField(processData.fechaRadicacion, 'fecha_radicacion', 'FECHA_RADICACION', 'FECHA RADICACION');
+      setField(processData.lugarAccidente, 'lugar_accidente', 'LUGAR DE ACCIDENTE');
+      setField(processData.fiscalia, 'fiscalia', 'FÍSCALIA', 'FISCALIA');
+      setField(processData.ciudad, 'ciudad', 'CIUDAD');
+      setField(processData.ciudad1, 'ciudad_1', 'CIUDAD_1');
+      setField(processData.ciudad2, 'ciudad_2', 'CIUDAD_2');
+      setField(processData.ciudad3, 'ciudad_3', 'CIUDAD_3');
+      setField(processData.aseguradora, 'aseguradora', 'ASEGURADORA');
+      setField(processData.actuacion, 'actuacion', 'ACTUACIÓN', 'ACTUACION');
+      setField(processData.fechaReclamacion, 'fecha_reclamacion', 'FECHA RECLAMACIÓN', 'FECHA RECLAMACION');
+      setField(processData.conciliacion, 'conciliacion', 'CONCILIACIÓN', 'CONCILIACION');
+      setField(processData.fechaPresentacionDemanda, 'fecha_presentacion_demanda', 'FECHA PRESENTACIÓN DEMANDA', 'FECHA PRESENTACION DEMANDA');
+      setField(processData.radicado, 'radicado', 'RADICADO');
+      setField(processData.radicado1, 'radicado_1', 'RADICADO_1');
+      setField(processData.prestamos, 'prestamos', 'PRESTAMOS');
+      setField(processData.celular, 'celular', 'CELULAR');
+      setField(processData.celularSecundario, 'celular_1', 'CELULAR_1', 'CELULAR 1');
+      setField(processData.telefono, 'telefono', 'TELEFONO', 'TELÉFONO');
+      setField(processData.correoElectronico, 'correo_electronico', 'CORREO ELECTRÓNICO', 'CORREO ELECTRONICO', 'correo', 'CORREO');
+      setField(processData.direccion, 'direccion', 'DIRECCIÓN', 'DIRECCION');
+
+      console.log('📝 Creando proceso directamente en Supabase:', insertData);
+
+      const { data: insertedData, error: insertError } = await supabase
+        .from(info.tableName)
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error de Supabase al crear proceso:', insertError);
+        throw new Error(insertError.message);
+      }
+
+      if (!insertedData) {
+        throw new Error('No se recibieron datos de Supabase tras la inserción');
+      }
+
+      const newProcess = transformSupabaseToMock(insertedData);
+      await refreshProcesses();
+      return newProcess;
     } catch (err) {
       console.error('Error al crear proceso:', err);
       throw err;
@@ -287,66 +479,90 @@ export const useProcesses = () => {
 
   const updateProcess = async (id: string, updates: Partial<MockProceso>) => {
     try {
-      // Buscar el proceso original para obtener el ID numérico de la base de datos
-      const procesoOriginal = procesos.find(p => p.id === id);
-      if (!procesoOriginal) throw new Error('Proceso no encontrado');
+      const info = await detectTableInfo();
+      const sampleRecord = info.sampleRecord || {};
 
-      // Preparar datos actualizados para la API
-      const updateData: Partial<ControlProcesoAntecedente> = {};
+      // Preparar datos actualizados usando los nombres reales de columna
+      const updateData: Record<string, any> = {};
+      const setField = (value: any, ...candidates: string[]) => {
+        if (value === undefined) return;
+        const key = resolveColumnName(sampleRecord, candidates);
+        if (!key) return;
+        updateData[key] = value;
+      };
       
-      if (updates.clienteId !== undefined) updateData.cliente_id = updates.clienteId;
-      if (updates.clienteNombre !== undefined) updateData.cliente_nombre = updates.clienteNombre;
-      if (updates.cedula !== undefined) updateData.cedula = updates.cedula;
-      if (updates.estado !== undefined) updateData.estado = updates.estado;
-      if (updates.estadoPublico !== undefined) updateData.estado_publico = updates.estadoPublico;
-      if (updates.tipo !== undefined) updateData.tipo = updates.tipo;
-      if (updates.fecha !== undefined) updateData.fecha = updates.fecha;
-      if (updates.fechaIngreso !== undefined) updateData.fecha_ingreso = updates.fechaIngreso;
-      if (updates.demandado !== undefined) updateData.demandado = updates.demandado;
-      if (updates.codigoAcceso !== undefined) updateData.codigo_acceso = updates.codigoAcceso;
-      if (updates.observaciones !== undefined) updateData.observaciones = updates.observaciones;
-      if (updates.observacionesInternas !== undefined) updateData.observaciones_internas = updates.observacionesInternas;
-      if (updates.observacionesCliente !== undefined) updateData.observaciones_cliente = updates.observacionesCliente;
-      if (updates.juzgado !== undefined) updateData.juzgado = updates.juzgado;
-      if (updates.placaVehiculo !== undefined) updateData.placa_vehiculo = updates.placaVehiculo;
-      if ((updates as any).celular !== undefined) updateData.celular = (updates as any).celular;
-      if ((updates as any).telefono !== undefined) updateData.telefono = (updates as any).telefono;
-      if (updates.valorHonorarios !== undefined) updateData.valor_honorarios = updates.valorHonorarios;
-      if (updates.valorPeritaje !== undefined) updateData.valor_peritaje = updates.valorPeritaje;
-      if (updates.valorPrestamos !== undefined) updateData.valor_prestamos = updates.valorPrestamos;
-      if (updates.gastosAdicionales !== undefined) updateData.gastos_adicionales = updates.gastosAdicionales;
-      if (updates.fechaRadicacion !== undefined) updateData.fecha_radicacion = updates.fechaRadicacion;
+      setField(updates.clienteNombre, 'cliente_nombre', 'CLIENTE_NOMBRE', 'NOMBRE_CLIENTE', 'NOMBRE');
+      setField(updates.cedula, 'cedula', 'CEDULA', 'CEDULA_NIT');
+      setField(updates.estado, 'estado', 'ESTADO', 'Estado');
+      setField(updates.estadoPublico, 'estado_publico', 'ESTADO_PUBLICO', 'ESTADO PUBLICO');
+      setField(updates.estadoProceso, 'estado_proceso', 'ESTADO PROCESO');
+      setField(updates.tipo, 'tipo', 'TIPO');
+      setField(updates.claseProceso, 'clase_de_proceso', 'CLASE DE PROCESO', 'CLASE PROCESO');
+      setField(updates.responsabilidad, 'responsabilidad', 'RESPONSABILIDAD');
+      setField(updates.fecha, 'fecha', 'FECHA');
+      setField(updates.fechaIngreso, 'fecha_ingreso', 'FECHA_INGRESO', 'FECHA DE INGRESO', 'CREATED_AT');
+      setField(updates.fechaAccidente, 'fecha_accidente', 'FECHA DE ACCIDENTE');
+      setField(updates.caducidad, 'caducidad', 'CADUCIDAD');
+      setField(updates.fechaQuerella, 'fecha_querella', 'FECHA QUERELLA');
+      setField(updates.demandado, 'demandado', 'DEMANDADO');
+      setField(updates.observaciones, 'observaciones', 'OBSERVACIONES');
+      setField(updates.observacionesInternas, 'observaciones_internas', 'OBSERVACIONES_INTERNAS');
+      setField(updates.observacionesCliente, 'observaciones_cliente', 'OBSERVACIONES_CLIENTE');
+      setField(updates.juzgado, 'juzgado', 'JUZGADO');
+      setField(updates.rama, 'rama', 'RAMA');
+      setField(updates.placaVehiculo, 'placa_vehiculo', 'PLACA_VEHICULO', 'PLACA');
+      setField((updates as any).celular, 'celular', 'CELULAR', 'CELULAR_1', 'CELULAR 1');
+      setField((updates as any).telefono, 'telefono', 'TELEFONO', 'TELÉFONO');
+      setField((updates as any).celularSecundario, 'celular_1', 'CELULAR_1', 'CELULAR 1');
+      setField((updates as any).correoElectronico, 'correo_electronico', 'CORREO ELECTRÓNICO', 'CORREO ELECTRONICO', 'correo', 'CORREO', 'EMAIL');
+      setField((updates as any).direccion, 'direccion', 'DIRECCIÓN', 'DIRECCION');
+      setField((updates as any).ciudad, 'ciudad', 'CIUDAD');
+      setField(updates.ciudad1, 'ciudad_1', 'CIUDAD_1');
+      setField(updates.ciudad2, 'ciudad_2', 'CIUDAD_2');
+      setField(updates.ciudad3, 'ciudad_3', 'CIUDAD_3');
+      setField(updates.valorHonorarios, 'valor_honorarios', 'VALOR_HONORARIOS', 'HONORARIOS');
+      setField(updates.valorPeritaje, 'valor_peritaje', 'VALOR_PERITAJE', 'PERITAJE');
+      setField(updates.valorPrestamos, 'valor_prestamos', 'VALOR_PRESTAMOS');
+      setField(updates.gastosAdicionales, 'gastos_adicionales', 'GASTOS_ADICIONALES', 'GASTOS');
+      setField(updates.fechaRadicacion, 'fecha_radicacion', 'FECHA_RADICACION', 'FECHA RADICACION');
+      setField(updates.lugarAccidente, 'lugar_accidente', 'LUGAR DE ACCIDENTE');
+      setField(updates.fiscalia, 'fiscalia', 'FÍSCALIA', 'FISCALIA');
+      setField(updates.aseguradora, 'aseguradora', 'ASEGURADORA');
+      setField(updates.actuacion, 'actuacion', 'ACTUACIÓN', 'ACTUACION');
+      setField(updates.fechaReclamacion, 'fecha_reclamacion', 'FECHA RECLAMACIÓN', 'FECHA RECLAMACION');
+      setField(updates.conciliacion, 'conciliacion', 'CONCILIACIÓN', 'CONCILIACION');
+      setField(updates.fechaPresentacionDemanda, 'fecha_presentacion_demanda', 'FECHA PRESENTACIÓN DEMANDA', 'FECHA PRESENTACION DEMANDA');
+      setField(updates.radicado, 'radicado', 'RADICADO');
+      setField(updates.radicado1, 'radicado_1', 'RADICADO_1');
+      setField(updates.prestamos, 'prestamos', 'PRESTAMOS');
 
-      // Necesitamos obtener el ID numérico de la base de datos
-      // Primero intentamos buscar en los procesos existentes para obtener el ID numérico
-      // Si no lo encontramos, necesitamos buscar en Supabase directamente
-      let dbId: number | string = id;
-      
-      // Si el ID es un string como "PROC-123", necesitamos buscar el ID numérico
-      if (id.startsWith('PROC-')) {
-        // Buscar en Supabase para obtener el ID numérico usando el tipo correcto
-        if (supabase) {
-          const info = await detectTableInfo();
-          
-          // Buscar por proceso_id para obtener el id numérico
-          const { data: foundData } = await supabase
-            .from(info.tableName)
-            .select(info.idColumnName)
-            .eq('proceso_id', id)
-            .maybeSingle();
-          
-          if (foundData && foundData[info.idColumnName] !== undefined) {
-            dbId = foundData[info.idColumnName];
-          }
-        }
+      if (!supabase) {
+        throw new Error('Cliente de Supabase no inicializado. Verifica tu archivo .env');
       }
 
-      console.log('📝 Actualizando proceso a través de la API:', { id: dbId, updates: updateData });
+      let filterValue: string | number = id;
+      if (info.idType === 'number') {
+        const numericId = Number(id);
+        if (Number.isNaN(numericId)) {
+          throw new Error(`ID inválido. Se esperaba un valor numérico y se recibió "${id}".`);
+        }
+        filterValue = numericId;
+      } else {
+        filterValue = id;
+      }
 
-      // Llamar a la API para actualizar el registro
-      await api.updateRecord(dbId, updateData);
+      console.log('📝 Actualizando proceso directamente en Supabase:', { column: info.idColumnName, value: filterValue, updates: updateData });
 
-      // Recargar todos los procesos
+      const { error: updateError } = await supabase
+        .from(info.tableName)
+        .update(updateData)
+        .eq(info.idColumnName, filterValue);
+
+      if (updateError) {
+        console.error('Error de Supabase al actualizar proceso:', updateError);
+        throw new Error(updateError.message);
+      }
+
       await refreshProcesses();
     } catch (err) {
       console.error('Error al actualizar proceso:', err);
@@ -356,38 +572,35 @@ export const useProcesses = () => {
 
   const deleteProcess = async (id: string) => {
     try {
-      // Necesitamos obtener el ID numérico de la base de datos
-      let dbId: number | string = id;
-      
-      // Si el ID es un string como "PROC-123", necesitamos buscar el ID numérico
-      if (id.startsWith('PROC-')) {
-        // Buscar en Supabase para obtener el ID numérico usando el tipo correcto
-        if (supabase) {
-          const info = await detectTableInfo();
-          
-          // Buscar por proceso_id para obtener el id numérico
-          const { data: foundData } = await supabase
-            .from(info.tableName)
-            .select(info.idColumnName)
-            .eq('proceso_id', id)
-            .maybeSingle();
-          
-          if (foundData && foundData[info.idColumnName] !== undefined) {
-            dbId = foundData[info.idColumnName];
-          } else {
-            throw new Error('No se encontró el proceso en la base de datos');
-          }
-        } else {
-          throw new Error('No se puede obtener el ID numérico. Supabase no está inicializado.');
-        }
+      if (!supabase) {
+        throw new Error('Cliente de Supabase no inicializado. Verifica tu archivo .env');
       }
 
-      console.log('🗑️ Eliminando proceso a través de la API:', dbId);
+      const info = await detectTableInfo();
 
-      // Llamar a la API para eliminar el registro
-      await api.deleteRecord(dbId);
+      let filterValue: string | number = id;
+      if (info.idType === 'number') {
+        const numericId = Number(id);
+        if (Number.isNaN(numericId)) {
+          throw new Error(`ID inválido. Se esperaba un valor numérico y se recibió "${id}".`);
+        }
+        filterValue = numericId;
+      } else {
+        filterValue = id;
+      }
 
-      // Recargar todos los procesos
+      console.log('🗑️ Eliminando proceso directamente en Supabase:', { column: info.idColumnName, value: filterValue });
+
+      const { error: deleteError } = await supabase
+        .from(info.tableName)
+        .delete()
+        .eq(info.idColumnName, filterValue);
+
+      if (deleteError) {
+        console.error('Error de Supabase al eliminar proceso:', deleteError);
+        throw new Error(deleteError.message);
+      }
+
       await refreshProcesses();
     } catch (err) {
       console.error('Error al eliminar proceso:', err);

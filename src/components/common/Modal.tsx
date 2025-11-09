@@ -7,9 +7,17 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   className?: string;
+  showCloseButton?: boolean;
 }
 
-const Modal = ({ isOpen, onClose, title, children, className = '' }: ModalProps) => {
+const Modal = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  className = '',
+  showCloseButton = true
+}: ModalProps) => {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -25,21 +33,27 @@ const Modal = ({ isOpen, onClose, title, children, className = '' }: ModalProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className={`bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto ${className}`}>
-        <div className="p-6">
-          {title && (
-            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-4 border-b border-slate-200">
-              <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
-              <button
-                onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-          )}
-          {children}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm">
+      <div className="w-full max-w-5xl">
+        <div className="max-h-[90vh] overflow-hidden rounded-[30px] bg-gradient-to-br from-slate-200 via-white to-slate-100 p-[1px] shadow-2xl shadow-slate-900/25">
+          <div className={`flex h-full max-h-[90vh] flex-col overflow-hidden rounded-[28px] bg-white/95 backdrop-blur ${className}`}>
+            {title && (
+              <div className="sticky top-0 z-10 bg-white/95 px-6 py-5 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
+                  {showCloseButton && (
+                    <button
+                      onClick={onClose}
+                      className="rounded-full border border-slate-200 bg-white p-2 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
+          </div>
         </div>
       </div>
     </div>

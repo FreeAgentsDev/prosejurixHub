@@ -11,7 +11,6 @@ export interface MockProceso {
   clienteNombre: string;
   clienteId: number;
   demandado: string;
-  codigoAcceso: string;
   observaciones?: string;
   observacionesInternas?: string;
   observacionesCliente?: string;
@@ -22,6 +21,32 @@ export interface MockProceso {
   valorPrestamos?: number;
   gastosAdicionales?: number;
   fechaRadicacion?: string;
+  celular?: string;
+  celularSecundario?: string;
+  telefono?: string;
+  correoElectronico?: string;
+  direccion?: string;
+  ciudad?: string;
+  radicado?: string;
+  claseProceso?: string;
+  responsabilidad?: string;
+  fechaAccidente?: string;
+  caducidad?: string;
+  lugarAccidente?: string;
+  ciudad1?: string;
+  fechaQuerella?: string;
+  fiscalia?: string;
+  ciudad2?: string;
+  aseguradora?: string;
+  actuacion?: string;
+  fechaReclamacion?: string;
+  conciliacion?: string;
+  fechaPresentacionDemanda?: string;
+  rama?: string;
+  radicado1?: string;
+  ciudad3?: string;
+  estadoProceso?: string;
+  prestamos?: string;
 }
 
 export interface MockCliente {
@@ -66,7 +91,7 @@ export const mockClientes: MockCliente[] = [
 
 export const mockProcesos: MockProceso[] = [
   {
-    id: 'PROC-001',
+    id: '1',
     cedula: '12345678',
     estado: 'activo',
     estadoPublico: 'En investigación',
@@ -76,7 +101,6 @@ export const mockProcesos: MockProceso[] = [
     clienteNombre: 'María González Pérez',
     clienteId: 1,
     demandado: 'Seguros Bolívar S.A.',
-    codigoAcceso: 'ABC123',
     observaciones: 'Estamos recopilando las pruebas necesarias para su caso. El peritaje del vehículo está programado para la próxima semana.',
     observacionesInternas: 'Pendiente peritaje del vehículo. Contactar perito la próxima semana.',
     observacionesCliente: 'Estamos recopilando las pruebas necesarias para su caso. El peritaje del vehículo está programado para la próxima semana.',
@@ -89,7 +113,7 @@ export const mockProcesos: MockProceso[] = [
     fechaRadicacion: ''
   },
   {
-    id: 'PROC-002',
+    id: '2',
     cedula: '12345678',
     estado: 'activo',
     estadoPublico: 'En negociación',
@@ -99,7 +123,6 @@ export const mockProcesos: MockProceso[] = [
     clienteNombre: 'María González Pérez',
     clienteId: 1,
     demandado: 'SURA S.A.',
-    codigoAcceso: 'XYZ789',
     observaciones: 'Hemos presentado la reclamación a la aseguradora. Esperamos respuesta en los próximos 15 días hábiles.',
     observacionesInternas: 'Aseguradora ofreció $15M. Cliente quiere $20M. Programar reunión.',
     observacionesCliente: 'Hemos presentado la reclamación a la aseguradora. Esperamos respuesta en los próximos 15 días hábiles.',
@@ -112,7 +135,7 @@ export const mockProcesos: MockProceso[] = [
     fechaRadicacion: ''
   },
   {
-    id: 'PROC-003',
+    id: '3',
     cedula: '87654321',
     estado: 'finalizado',
     estadoPublico: 'Caso Cerrado',
@@ -122,7 +145,6 @@ export const mockProcesos: MockProceso[] = [
     clienteNombre: 'Carlos Rodríguez López',
     clienteId: 2,
     demandado: 'Allianz Seguros',
-    codigoAcceso: 'DEF456',
     observaciones: 'Caso resuelto exitosamente. Indemnización otorgada.',
     observacionesInternas: 'Caso cerrado. Pagos completados.',
     observacionesCliente: 'Caso resuelto exitosamente. Indemnización otorgada.',
@@ -135,7 +157,7 @@ export const mockProcesos: MockProceso[] = [
     fechaRadicacion: '2024-12-15'
   },
   {
-    id: 'PROC-004',
+    id: '4',
     cedula: '11223344',
     estado: 'activo',
     estadoPublico: 'En Audiencia',
@@ -145,7 +167,6 @@ export const mockProcesos: MockProceso[] = [
     clienteNombre: 'Ana Martínez Silva',
     clienteId: 3,
     demandado: 'Empresa XYZ S.A.',
-    codigoAcceso: 'GHI789',
     observaciones: 'Proceso en etapa de audiencias. Próxima audiencia programada para la próxima semana.',
     observacionesInternas: 'Audiencia programada. Preparar documentación adicional.',
     observacionesCliente: 'Proceso en etapa de audiencias. Próxima audiencia programada para la próxima semana.',
@@ -158,7 +179,7 @@ export const mockProcesos: MockProceso[] = [
     fechaRadicacion: '2024-03-15'
   },
   {
-    id: 'PROC-005',
+    id: '5',
     cedula: '87654321',
     estado: 'en_espera',
     estadoPublico: 'Evaluación Inicial',
@@ -168,7 +189,6 @@ export const mockProcesos: MockProceso[] = [
     clienteNombre: 'Carlos Rodríguez López',
     clienteId: 2,
     demandado: 'Empresa ABC Ltda.',
-    codigoAcceso: 'JKL012',
     observaciones: 'Caso en evaluación inicial. Próximos pasos a definir.',
     observacionesInternas: 'Revisar documentación. Esperar respuesta del cliente.',
     observacionesCliente: 'Caso en evaluación inicial. Próximos pasos a definir.',
