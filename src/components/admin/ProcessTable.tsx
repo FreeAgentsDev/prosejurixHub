@@ -1,4 +1,4 @@
-import { Edit, Trash2, Phone, Eye, Calendar, UserCircle2 } from 'lucide-react';
+import { Trash2, Phone, UserCircle2, BookOpen, Calendar, Tag } from 'lucide-react';
 import Table from '../common/Table';
 
 interface Process {
@@ -14,13 +14,13 @@ interface Process {
 
 interface ProcessTableProps {
   processes: Process[];
-  onEdit: (process: Process) => void;
   onDelete: (id: string | number) => void;
   onView?: (process: Process) => void;
   procesosRaw?: any[]; // Datos crudos de Supabase
+  onPortalView?: (payload: { raw?: any; normalized?: Process | null }) => void;
 }
 
-const ProcessTable = ({ processes, onEdit, onDelete, onView, procesosRaw }: ProcessTableProps) => {
+const ProcessTable = ({ processes, onDelete, onView, procesosRaw, onPortalView }: ProcessTableProps) => {
   // Función helper para obtener valores de diferentes posibles nombres de columna
   const getValue = (obj: any, ...keys: string[]): any => {
     for (const key of keys) {
@@ -64,6 +64,20 @@ const ProcessTable = ({ processes, onEdit, onDelete, onView, procesosRaw }: Proc
     );
   };
 
+  const obtenerEstadoInterno = (proceso: any): string => {
+    return (
+      getValue(
+        proceso,
+        'estado',
+        'Estado',
+        'ESTADO',
+        'estado_interno',
+        'estadoInterno',
+        'ESTADO_INTERNO'
+      ) || 'Sin estado'
+    );
+  };
+
   const obtenerFechaIngreso = (proceso: any): string => {
     return (
       getValue(
@@ -78,6 +92,21 @@ const ProcessTable = ({ processes, onEdit, onDelete, onView, procesosRaw }: Proc
     );
   };
 
+  const obtenerDemandado = (proceso: any): string => {
+    return getValue(proceso, 'demandado', 'Demandado', 'DEMANDADO') || 'Sin demandado';
+  };
+
+  const formatDate = (value: string | null | undefined) => {
+    if (!value) return 'No especificada';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
   if (datosMostrar.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -88,89 +117,216 @@ const ProcessTable = ({ processes, onEdit, onDelete, onView, procesosRaw }: Proc
 
   return (
     <div className="rounded-3xl bg-white/60 p-2 shadow-xl shadow-slate-900/5 backdrop-blur">
-      <div className="overflow-hidden rounded-3xl border border-white/60">
-        <div className="overflow-x-auto">
-          <Table className="bg-white/80">
-            <Table.Header className="bg-gradient-to-r from-indigo-600 via-sky-500 to-blue-600 text-white">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
-                  Cliente
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
-                  Teléfono
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
-                  Acciones
-                </th>
-              </tr>
-            </Table.Header>
-            <tbody className="divide-y divide-slate-100/70">
-              {datosMostrar.map((proceso, index) => {
-                const idProceso = obtenerId(proceso);
-                const nombreCliente = obtenerNombre(proceso);
-                const telefono = obtenerTelefono(proceso);
-                const estadoPublico = obtenerEstadoPublico(proceso);
-                const fechaIngreso = obtenerFechaIngreso(proceso);
+      <div className="hidden overflow-hidden rounded-3xl border border-white/60 md:block">
+        <Table className="bg-white/80">
+          <Table.Header className="bg-gradient-to-r from-indigo-600 via-sky-500 to-blue-600 text-white">
+            <tr>
+              <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-white/80 sm:px-6">
+                Acciones
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-white/80 sm:px-6">
+                Cliente
+              </th>
+              <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-white/80 sm:px-6">
+                Teléfono
+              </th>
+            </tr>
+          </Table.Header>
+          <tbody className="divide-y divide-slate-100/70">
+            {datosMostrar.map((proceso, index) => {
+              const idProceso = obtenerId(proceso);
+              const nombreCliente = obtenerNombre(proceso);
+              const telefono = obtenerTelefono(proceso);
+              const rawRegistro =
+                procesosRaw && procesosRaw.length > 0
+                  ? procesosRaw.find((item) => obtenerId(item) === idProceso)
+                  : datosMostrar === procesosRaw
+                  ? proceso
+                  : undefined;
+              const normalizedRegistro =
+                processes.find((item) => String(item.id) === String(idProceso)) ||
+                (datosMostrar === processes ? (proceso as Process) : null);
 
-                return (
-                  <Table.Row
-                    key={idProceso || index}
-                    className="group bg-white/80 backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-lg"
+              return (
+                <Table.Row
+                  key={idProceso || index}
+                  className="group bg-white/80 backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-lg"
+                >
+                  <Table.Cell className="align-middle px-4 py-4 sm:px-6">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          onPortalView?.({
+                            raw: rawRegistro,
+                            normalized: normalizedRegistro ?? null
+                          })
+                        }
+                        className="rounded-full bg-white/80 p-2 text-blue-500 shadow-sm transition hover:bg-blue-50 hover:text-blue-700"
+                        title="Ver portal del cliente"
+                        type="button"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(idProceso)}
+                        className="rounded-full bg-white/80 p-2 text-rose-500 shadow-sm transition hover:bg-rose-50 hover:text-rose-700"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </Table.Cell>
+                  <Table.Cell className="align-middle px-4 py-4 sm:px-6">
+                    <button
+                      type="button"
+                      onClick={() => onView?.(proceso)}
+                      className={`flex w-full items-center gap-3 rounded-2xl px-1 py-1 text-left transition ${
+                        onView
+                          ? 'cursor-pointer hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500'
+                          : ''
+                      }`}
+                      aria-label={onView ? `Ver detalles de ${nombreCliente}` : undefined}
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-500 shadow-sm">
+                        <UserCircle2 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p
+                          className={`font-semibold text-slate-800 ${
+                            onView ? 'underline decoration-transparent hover:decoration-sky-400' : ''
+                          }`}
+                        >
+                          {nombreCliente}
+                        </p>
+                        <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">
+                          #{String(idProceso)}
+                        </p>
+                      </div>
+                    </button>
+                  </Table.Cell>
+                  <Table.Cell className="align-middle px-4 py-4 sm:px-6">
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <span className="rounded-full bg-slate-100 p-1.5 text-blue-500 shadow-inner">
+                        <Phone className="h-4 w-4" />
+                      </span>
+                      {telefono}
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
+          </tbody>
+        </Table>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {datosMostrar.map((proceso, index) => {
+          const idProceso = obtenerId(proceso);
+          const nombreCliente = obtenerNombre(proceso);
+          const telefono = obtenerTelefono(proceso);
+          const estadoPublico = obtenerEstadoPublico(proceso);
+          const estadoInterno = obtenerEstadoInterno(proceso);
+          const fechaIngreso = obtenerFechaIngreso(proceso);
+          const demandado = obtenerDemandado(proceso);
+          const rawRegistro =
+            procesosRaw && procesosRaw.length > 0
+              ? procesosRaw.find((item) => obtenerId(item) === idProceso)
+              : datosMostrar === procesosRaw
+              ? proceso
+              : undefined;
+          const normalizedRegistro =
+            processes.find((item) => String(item.id) === String(idProceso)) ||
+            (datosMostrar === processes ? (proceso as Process) : null);
+
+          return (
+            <div
+              key={idProceso || index}
+              className="rounded-3xl border border-white/70 bg-white/90 p-4 shadow-sm shadow-slate-900/5 backdrop-blur"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => onView?.(proceso)}
+                  className={`min-w-0 text-left ${
+                    onView ? 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500' : ''
+                  }`}
+                  aria-label={onView ? `Ver detalles de ${nombreCliente}` : undefined}
+                >
+                  <p className="text-base font-semibold text-slate-900">{nombreCliente}</p>
+                  <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">
+                    #{String(idProceso)}
+                  </p>
+                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    onClick={() =>
+                      onPortalView?.({
+                        raw: rawRegistro,
+                        normalized: normalizedRegistro ?? null
+                      })
+                    }
+                    className="rounded-full bg-slate-100 p-2 text-blue-500 shadow-sm transition hover:bg-blue-50 hover:text-blue-700"
+                    title="Ver portal del cliente"
+                    type="button"
                   >
-                    <Table.Cell className="align-middle">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-500 shadow-sm">
-                          <UserCircle2 className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-800">{nombreCliente}</p>
-                          <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">
-                            #{String(idProceso)}
-                          </p>
-                        </div>
-                      </div>
-                    </Table.Cell>
-                    <Table.Cell className="align-middle">
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <span className="rounded-full bg-slate-100 p-1.5 text-blue-500 shadow-inner">
-                          <Phone className="h-4 w-4" />
-                        </span>
-                        {telefono}
-                      </div>
-                    </Table.Cell>
-                    <Table.Cell className="align-middle">
-                      <div className="flex items-center gap-2">
-                        {onView && (
-                          <button
-                            onClick={() => onView(proceso)}
-                            className="rounded-full bg-white/80 p-2 text-sky-500 shadow-sm transition hover:bg-sky-50 hover:text-sky-700"
-                            title="Ver detalle"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => onEdit(proceso)}
-                          className="rounded-full bg-white/80 p-2 text-indigo-500 shadow-sm transition hover:bg-indigo-50 hover:text-indigo-700"
-                          title="Editar"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => onDelete(idProceso)}
-                          className="rounded-full bg-white/80 p-2 text-rose-500 shadow-sm transition hover:bg-rose-50 hover:text-rose-700"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </Table.Cell>
-                  </Table.Row>
-                );
-              })}
-            </tbody>
-          </Table>
-        </div>
+                    <BookOpen className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => onDelete(idProceso)}
+                    className="rounded-full bg-slate-100 p-2 text-rose-500 shadow-sm transition hover:bg-rose-50 hover:text-rose-700"
+                    title="Eliminar"
+                    type="button"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-slate-600">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-slate-100 p-1.5 text-blue-500 shadow-inner">
+                    <Phone className="h-4 w-4" />
+                  </span>
+                  <span className="truncate">{telefono}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <span className="rounded-full bg-slate-100 p-1.5 text-indigo-500 shadow-inner">
+                    <Tag className="h-4 w-4" />
+                  </span>
+                  <span className="text-slate-700">Estado público:</span>
+                  <span className="text-slate-900">{estadoPublico}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <span className="rounded-full bg-slate-100 p-1.5 text-purple-500 shadow-inner">
+                    <Tag className="h-4 w-4" />
+                  </span>
+                  <span className="text-slate-700">Estado interno:</span>
+                  <span className="text-slate-900">{estadoInterno}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-slate-100 p-1.5 text-emerald-500 shadow-inner">
+                    <Calendar className="h-4 w-4" />
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Ingreso:
+                  </span>
+                  <span className="text-sm text-slate-900">{formatDate(fechaIngreso)}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="rounded-full bg-slate-100 p-1.5 text-sky-500 shadow-inner">
+                    <UserCircle2 className="h-4 w-4" />
+                  </span>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Demandado
+                    <p className="mt-1 text-sm font-normal normal-case tracking-normal text-slate-900">
+                      {demandado}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

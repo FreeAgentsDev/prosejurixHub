@@ -410,9 +410,9 @@ const ProcesoDetalle = () => {
         <div className="mt-12 sm:mt-16">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
             {!isEditing ? (
-              <div className="space-y-8">
-                <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
-                  <div className="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 px-6 py-6 sm:px-8">
+              <div className="space-y-6 sm:space-y-8">
+                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 sm:rounded-3xl">
+                  <div className="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 px-4 py-5 sm:px-8 sm:py-6">
                     <div className="flex flex-col gap-4 text-white sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h2 className="text-2xl font-semibold sm:text-3xl">{view_clienteNombre || 'Cliente'}</h2>
@@ -426,9 +426,9 @@ const ProcesoDetalle = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-8 px-6 py-8 sm:px-8">
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 shadow-sm">
+                  <div className="space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8">
+                    <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm sm:p-5">
                         <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Información del Cliente</h3>
                         <div className="mt-4 space-y-3 text-sm text-slate-600">
                           <div>
@@ -476,7 +476,7 @@ const ProcesoDetalle = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 shadow-sm">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm sm:p-5">
                         <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Información del Proceso</h3>
                         <div className="mt-4 space-y-3 text-sm text-slate-600">
                           <div>
@@ -514,7 +514,7 @@ const ProcesoDetalle = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 shadow-sm">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm sm:p-5">
                         <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Información Legal</h3>
                         <div className="mt-4 space-y-3 text-sm text-slate-600">
                           <div>
@@ -558,13 +558,13 @@ const ProcesoDetalle = () => {
                       };
 
                       return (
-                        <section className="rounded-3xl border border-slate-200 bg-white shadow-inner shadow-slate-900/5">
-                          <div className="border-b border-slate-200 px-6 py-4 sm:px-8">
+                        <section className="rounded-2xl border border-slate-200 bg-white shadow-inner shadow-slate-900/5 sm:rounded-3xl">
+                          <div className="border-b border-slate-200 px-4 py-4 sm:px-8">
                             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
                               Todos los Campos de la Tabla
                             </h3>
                           </div>
-                          <div className="grid grid-cols-1 gap-4 px-6 py-6 sm:px-8 md:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid grid-cols-1 gap-4 px-4 py-5 sm:px-8 sm:py-6 md:grid-cols-2 lg:grid-cols-3">
                             {camposAdicionales.map(({ key, value }) => {
                               const nk = normalizeKey(String(key));
                               return (

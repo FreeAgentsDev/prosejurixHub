@@ -7,6 +7,7 @@ import SearchBar from '../../components/common/SearchBar';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import ProcessForm from '../../components/admin/ProcessForm';
+import ClientPortalPreview from '../../components/admin/ClientPortalPreview';
 import { mockClientes, estadosInternos, MockProceso } from '../../data/mocks';
 import { useProcesses } from '../../hooks/useProcesses';
 import { useNotifications } from '../../components/common/NotificationProvider';
@@ -125,6 +126,14 @@ const Procesos = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [showPortalModal, setShowPortalModal] = useState(false);
+  const [portalPreviewData, setPortalPreviewData] = useState<{
+    clientName: string;
+    clientCedula?: string | null;
+    clientId?: string | number | null;
+    rawProcesos: any[];
+    procesosNormalizados: any[];
+  } | null>(null);
   const { notify } = useNotifications();
   const { confirm } = useConfirm();
 
@@ -138,6 +147,32 @@ const Procesos = () => {
       if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') return obj[key];
     }
     return null;
+  };
+
+  const getClientIdValue = (obj: any): string | number | null => {
+    return (
+      getValue(obj, 'cliente_id', 'clienteId', 'CLIENTE_ID', 'CLIENTEID', 'id_cliente', 'ID_CLIENTE') ?? null
+    );
+  };
+
+  const getClientCedulaValue = (obj: any): string | number | null => {
+    return (
+      getValue(
+        obj,
+        'CEDULA',
+        'cedula',
+        'Cedula',
+        'identificacion',
+        'Identificacion',
+        'IDENTIFICACION',
+        'nit',
+        'NIT',
+        'cedula_cliente',
+        'CEDULA_CLIENTE',
+        'clienteCedula',
+        'cliente_cedula'
+      ) ?? null
+    );
   };
 
   const normalizedSearchTerm = useMemo(
@@ -223,6 +258,120 @@ const Procesos = () => {
     setEditingItem(null);
   };
 
+  const handlePortalPreview = ({ raw, normalized }: { raw?: any; normalized?: any }) => {
+    const baseRecord = raw ?? normalized;
+    if (!baseRecord && !normalized) {
+      notify({
+        type: 'warning',
+        title: 'No se pudo abrir el portal',
+        message: 'No encontramos información suficiente de este cliente.'
+      });
+      return;
+    }
+
+    const nombreCliente =
+      getValue(
+        baseRecord,
+        'NOMBRE',
+        'nombre',
+        'Nombre',
+        'cliente_nombre',
+        'clienteNombre',
+        'CLIENTE',
+        'CLIENTE_NOMBRE',
+        'Nombre Cliente'
+      ) ?? normalized?.clienteNombre ?? 'Cliente sin nombre';
+
+    const cedulaCliente =
+      getClientCedulaValue(baseRecord) ?? getClientCedulaValue(normalized ?? {}) ?? null;
+
+    const idCliente = getClientIdValue(baseRecord) ?? getClientIdValue(normalized ?? {}) ?? null;
+
+    const normalizedName = nombreCliente ? normalizeText(String(nombreCliente)) : null;
+    const normalizedCedula = cedulaCliente ? normalizeText(String(cedulaCliente)) : null;
+    const normalizedId = idCliente !== null && idCliente !== undefined ? String(idCliente) : null;
+
+    const matchesRecord = (record: any): boolean => {
+      if (!record) return false;
+      const recordId = getClientIdValue(record);
+      if (normalizedId && recordId !== undefined && recordId !== null) {
+        if (String(recordId) === normalizedId) {
+          return true;
+        }
+      }
+      const recordCedula = getClientCedulaValue(record);
+      if (normalizedCedula && recordCedula) {
+        if (normalizeText(String(recordCedula)) === normalizedCedula) {
+          return true;
+        }
+      }
+      if (normalizedName) {
+        const candidates = new Set<string>();
+        collectNameCandidates(record).forEach((value) => {
+          if (value) {
+            candidates.add(normalizeText(String(value)));
+          }
+        });
+        if (record?.clienteNombre) {
+          candidates.add(normalizeText(String(record.clienteNombre)));
+        }
+        if (record?.nombre) {
+          candidates.add(normalizeText(String(record.nombre)));
+        }
+        if (record?.NOMBRE) {
+          candidates.add(normalizeText(String(record.NOMBRE)));
+        }
+        if (candidates.has(normalizedName)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const sameProceso = (a: any, b: any): boolean => {
+      if (!a || !b) return false;
+      const idA =
+        getValue(a, 'ID', 'id', 'Id', 'id_proceso', 'ID_PROCESO', 'procesoId', 'Proceso ID', 'ID Proceso') ??
+        null;
+      const idB =
+        getValue(b, 'ID', 'id', 'Id', 'id_proceso', 'ID_PROCESO', 'procesoId', 'Proceso ID', 'ID Proceso') ??
+        null;
+      if (idA !== null && idB !== null) {
+        return String(idA) === String(idB);
+      }
+      return false;
+    };
+
+    const rawMatches =
+      procesosRaw && procesosRaw.length > 0 ? procesosRaw.filter(matchesRecord) : [];
+    const normalizedMatches = procesos.filter(matchesRecord);
+
+    if (raw && rawMatches.every((record) => !sameProceso(record, raw))) {
+      rawMatches.unshift(raw);
+    }
+    if (normalized && normalizedMatches.every((record) => !sameProceso(record, normalized))) {
+      normalizedMatches.unshift(normalized);
+    }
+
+    if (rawMatches.length === 0 && normalizedMatches.length === 0) {
+      notify({
+        type: 'info',
+        title: 'Sin información disponible',
+        message: 'No encontramos procesos asociados a este cliente.'
+      });
+    }
+
+    setPortalPreviewData({
+      clientName: nombreCliente,
+      clientCedula:
+        cedulaCliente !== null && cedulaCliente !== undefined ? String(cedulaCliente) : null,
+      clientId: idCliente ?? null,
+      rawProcesos: rawMatches,
+      procesosNormalizados: normalizedMatches
+    });
+    setShowPortalModal(true);
+  };
+
   const handleView = (proceso: any) => {
     // Obtener el ID del proceso desde diferentes posibles columnas
     const procId = proceso.ID || proceso.id || proceso.Id;
@@ -238,23 +387,6 @@ const Procesos = () => {
 
     console.log('🔍 Navegando a detalles con ID:', procId, 'Proceso completo:', proceso);
     navigate(`/admin/procesos/${encodeURIComponent(String(procId))}?mode=view`);
-  };
-
-  const handleEdit = (proceso: any) => {
-    // Obtener el ID del proceso desde diferentes posibles columnas
-    const procId = proceso.ID || proceso.id || proceso.Id;
-    if (!procId) {
-      console.error('❌ No se pudo determinar el ID del proceso para edición', proceso);
-      notify({
-        type: 'error',
-        title: 'No se pudo editar el proceso',
-        message: 'No encontramos el identificador de este proceso. Intenta refrescar la página.'
-      });
-      return;
-    }
-
-    console.log('🔍 Navegando a edición con ID:', procId, 'Proceso completo:', proceso);
-    navigate(`/admin/procesos/${encodeURIComponent(String(procId))}?mode=edit`);
   };
 
   const handleDelete = async (id: string | number) => {
@@ -549,8 +681,7 @@ const Procesos = () => {
                 {filteredProcesos.length} procesos listos para gestionar
               </p>
               <p className="mt-2 text-xs text-slate-500">
-                Revisa la tabla para acceder al detalle, editar o eliminar cada proceso en cuestión de
-                segundos.
+                Revisa la tabla para acceder al detalle o eliminar cada proceso en cuestión de segundos.
               </p>
             </div>
           </div>
@@ -667,9 +798,9 @@ const Procesos = () => {
                           )
                       : undefined
                   }
-                  onEdit={handleEdit}
                   onDelete={handleDelete}
                   onView={handleView}
+                  onPortalView={handlePortalPreview}
                 />
               </>
             )}
@@ -692,6 +823,33 @@ const Procesos = () => {
           onSubmit={handleSubmit}
           onCancel={closeModal}
         />
+      </Modal>
+
+      <Modal
+        isOpen={showPortalModal}
+        onClose={() => {
+          setShowPortalModal(false);
+          setPortalPreviewData(null);
+        }}
+        title={portalPreviewData ? `Portal del cliente · ${portalPreviewData.clientName}` : 'Portal del cliente'}
+      >
+        {portalPreviewData ? (
+          <ClientPortalPreview
+            clientName={portalPreviewData.clientName}
+            clientCedula={portalPreviewData.clientCedula}
+            clientId={portalPreviewData.clientId}
+            rawProcesos={portalPreviewData.rawProcesos}
+            procesosNormalizados={portalPreviewData.procesosNormalizados}
+            onClose={() => {
+              setShowPortalModal(false);
+              setPortalPreviewData(null);
+            }}
+          />
+        ) : (
+          <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-8 text-center text-sm text-slate-500">
+            Selecciona un cliente para visualizar su portal.
+          </div>
+        )}
       </Modal>
     </div>
   );
