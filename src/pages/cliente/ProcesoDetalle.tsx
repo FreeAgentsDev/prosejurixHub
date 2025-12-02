@@ -4,6 +4,8 @@ import { ArrowLeft, Calendar, User, Building2, FileText, Tag, DollarSign, AlertC
 import Button from '../../components/common/Button';
 import { supabase } from '../../lib/supabase';
 import { detectTableAndIdType } from '../../lib/supabaseInspector';
+import { getValue } from '../../utils/dataHelpers';
+import { logger } from '../../utils/logger';
 
 const ProcesoDetalleCliente = () => {
   const { id } = useParams();
@@ -16,16 +18,6 @@ const ProcesoDetalleCliente = () => {
   const [proceso, setProceso] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Función helper para obtener valores de diferentes posibles nombres de columna
-  const getValue = (obj: any, ...keys: string[]): any => {
-    for (const key of keys) {
-      if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
-        return obj[key];
-      }
-    }
-    return null;
-  };
 
   // Función para formatear nombres de campo
   const formatFieldName = (fieldName: string): string => {
@@ -47,7 +39,7 @@ const ProcesoDetalleCliente = () => {
 
       // Decodificar el ID si viene codificado en la URL
       const decodedId = decodeURIComponent(id);
-      console.log('🔍 Buscando proceso con ID:', decodedId);
+      logger.debug('Buscando proceso con ID', 'ProcesoDetalleCliente', { id: decodedId });
 
       setIsLoading(true);
       setError(null);
@@ -67,7 +59,7 @@ const ProcesoDetalleCliente = () => {
             searchValue = numericId;
           }
 
-          console.log(`📡 Buscando en Supabase por ${tableInfo.idColumnName}:`, searchValue);
+          logger.debug('Buscando en Supabase', 'ProcesoDetalleCliente', { column: tableInfo.idColumnName });
 
           const { data: foundById, error: errorById } = await supabase
             .from(tableInfo.tableName)
@@ -76,14 +68,14 @@ const ProcesoDetalleCliente = () => {
             .maybeSingle();
 
           if (foundById && !errorById) {
-            console.log('✅ Proceso encontrado por ID:', foundById);
+            logger.debug('Proceso encontrado por ID', 'ProcesoDetalleCliente');
             procesoData = foundById;
           }
         }
 
         // Si no se encontró en Supabase, intentar con el estado de navegación como fallback
         if (!procesoData && procesosFromState && Array.isArray(procesosFromState)) {
-          console.log('⚠️ No encontrado en Supabase, usando datos del estado de navegación');
+          logger.debug('Usando datos del estado de navegación', 'ProcesoDetalleCliente');
           procesoData = procesosFromState.find((p: any) => {
             const procId = getValue(p, 'ID', 'id', 'Id');
             const procIdStr = procId ? String(procId) : '';
@@ -92,15 +84,16 @@ const ProcesoDetalleCliente = () => {
         }
 
         if (procesoData) {
-          console.log('✅ Datos del proceso cargados:', procesoData);
-          console.log('📋 Todos los campos disponibles:', Object.keys(procesoData));
+          logger.debug('Datos del proceso cargados', 'ProcesoDetalleCliente', {
+            fieldsCount: Object.keys(procesoData).length
+          });
           setProceso(procesoData);
         } else {
-          console.error('❌ No se encontró el proceso con ID:', decodedId);
+          logger.warn('No se encontró el proceso', 'ProcesoDetalleCliente', { id: decodedId });
           setError(`No se encontró el proceso con ID "${decodedId}". Verifica el ID o contacta al administrador.`);
         }
       } catch (err) {
-        console.error('Error al cargar proceso:', err);
+        logger.error('Error al cargar proceso', 'ProcesoDetalleCliente', err);
         const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
         
         // Mensaje de error más descriptivo

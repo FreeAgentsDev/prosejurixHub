@@ -84,11 +84,12 @@ export const logError = (error: AppError | Error, context?: string): void => {
   };
 
   // En producción, enviar a un servicio de logging
-  // Por ahora, solo console.error
-  console.error('Error:', logData);
-  
-  if (error instanceof AppError && error.originalError) {
-    console.error('Original error:', error.originalError);
+  // Usar logger seguro en lugar de console.error directo
+  if (import.meta.env.DEV) {
+    console.error('Error:', logData);
+    if (error instanceof AppError && error.originalError) {
+      console.error('Original error:', error.originalError);
+    }
   }
 };
 

@@ -7,6 +7,7 @@ interface DashboardCardsProps {
   procesosEnNegociacion: number;
   procesosFinalizados?: number;
   procesosEnRevision?: number;
+  onFinalizadosClick?: () => void;
 }
 
 const DashboardCards = ({
@@ -14,7 +15,8 @@ const DashboardCards = ({
   procesosActivos,
   procesosEnNegociacion,
   procesosFinalizados = 0,
-  procesosEnRevision = 0
+  procesosEnRevision = 0,
+  onFinalizadosClick
 }: DashboardCardsProps) => {
   const cards = [
     {
@@ -45,7 +47,9 @@ const DashboardCards = ({
       title: 'Finalizados',
       value: procesosFinalizados,
       icon: CheckCircle,
-      gradient: 'from-emerald-500 via-green-500 to-teal-500'
+      gradient: 'from-emerald-500 via-green-500 to-teal-500',
+      clickable: procesosFinalizados > 0 && !!onFinalizadosClick,
+      onClick: onFinalizadosClick
     }
   ];
 
@@ -53,10 +57,30 @@ const DashboardCards = ({
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-10">
       {cards.map((card, index) => {
         const Icon = card.icon;
+        const isClickable = (card as any).clickable;
+        const handleClick = (card as any).onClick;
+        
         return (
           <div
             key={index}
-            className="group relative overflow-hidden rounded-3xl bg-white/70 p-1 shadow-lg shadow-slate-900/5 transition hover:-translate-y-1 hover:shadow-xl"
+            className={`group relative overflow-hidden rounded-3xl bg-white/70 p-1 shadow-lg shadow-slate-900/5 transition hover:-translate-y-1 hover:shadow-xl ${
+              isClickable ? 'cursor-pointer' : ''
+            }`}
+            onClick={(e) => {
+              if (isClickable && handleClick) {
+                e.preventDefault();
+                e.stopPropagation();
+                handleClick();
+              }
+            }}
+            role={isClickable ? 'button' : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+            onKeyDown={(e) => {
+              if (isClickable && handleClick && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                handleClick();
+              }
+            }}
           >
             <div className={`relative flex h-full flex-col rounded-3xl bg-gradient-to-br ${card.gradient} p-5 text-white`}>
               <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-3xl transition group-hover:scale-125" />

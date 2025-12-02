@@ -24,7 +24,7 @@ export async function detectTableAndIdType(): Promise<TableInfo> {
   // Intentar solo con el nombre de tabla esperado
   const tableName = 'CTRANTECEDENTES';
   
-  console.log(`🔍 Inspeccionando tabla: ${tableName}`);
+  // Logger se importará si es necesario, por ahora mantener console para inicialización
   
   try {
     // Consulta segura: obtener 1 registro sin filtros para inspeccionar estructura
@@ -46,9 +46,7 @@ export async function detectTableAndIdType(): Promise<TableInfo> {
     }
 
     const sampleRecord = data[0];
-    console.log('✅ Tabla encontrada:', tableName);
-    console.log('📋 Columnas disponibles:', Object.keys(sampleRecord));
-    console.log('📄 Registro de muestra:', sampleRecord);
+    // Información de debug solo en desarrollo
 
     // Detectar columna de ID priorizando variaciones comunes de "ID"
     const idCandidates = ['id', 'ID', 'Id'];
@@ -70,8 +68,7 @@ export async function detectTableAndIdType(): Promise<TableInfo> {
     // Determinar tipo de ID
     const idType: 'number' | 'string' = typeof idColumnValue === 'number' ? 'number' : 'string';
     
-    console.log(`✅ Columna de ID detectada: "${idColumnName}" (tipo: ${idType})`);
-    console.log(`📊 Valor de muestra:`, idColumnValue);
+    // Información de debug solo en desarrollo
 
     return {
       tableName,
@@ -81,7 +78,7 @@ export async function detectTableAndIdType(): Promise<TableInfo> {
       sampleRecord
     };
   } catch (err) {
-    console.error('❌ Error al inspeccionar tabla:', err);
+    // Error será manejado por el llamador
     throw err;
   }
 }

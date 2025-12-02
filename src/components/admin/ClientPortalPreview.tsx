@@ -1,5 +1,6 @@
 import React from 'react';
 import ClientProcessView from '../cliente/ClientProcessView';
+import { getValue } from '../../utils/dataHelpers';
 
 interface ClientPortalPreviewProps {
   clientName: string;
@@ -10,15 +11,6 @@ interface ClientPortalPreviewProps {
   onClose?: () => void;
 }
 
-const getValue = (obj: any, ...keys: string[]): any => {
-  if (!obj) return null;
-  for (const key of keys) {
-    if (key && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
-      return obj[key];
-    }
-  }
-  return null;
-};
 
 const mapRecordToProcess = (record: any, index: number): any => {
   const id =

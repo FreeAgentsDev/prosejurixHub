@@ -140,11 +140,26 @@ const ProcessTable = memo(({ processes, onDelete, onView, procesosRaw, onPortalV
               const aseguradora = getInsurer(proceso);
               
               // Usar estado interno primero, si no está disponible usar público
+              // Priorizar estados finalizados independientemente de si es interno o público
               const estadoParaColor = (estadoInterno && estadoInterno !== 'Sin estado') 
                 ? estadoInterno 
                 : (estadoPublico && estadoPublico !== 'Sin estado' ? estadoPublico : '');
               
-              const colorBorde = getProcessBorderColor(estadoParaColor, responsabilidad, aseguradora);
+              // Verificar si alguno de los estados es finalizado (tiene máxima prioridad)
+              const esFinalizado = 
+                (estadoInterno && estadoInterno !== 'Sin estado' && 
+                 ['finalizado', 'cerrado', 'inactivo', 'final', 'terminado'].some(s => 
+                   estadoInterno.toLowerCase().includes(s.toLowerCase())
+                 )) ||
+                (estadoPublico && estadoPublico !== 'Sin estado' && 
+                 ['finalizado', 'cerrado', 'inactivo', 'final', 'terminado'].some(s => 
+                   estadoPublico.toLowerCase().includes(s.toLowerCase())
+                 ));
+              
+              // Si es finalizado, forzar el color verde (máxima prioridad)
+              const colorBorde = esFinalizado 
+                ? 'border-l-4 border-emerald-500'
+                : getProcessBorderColor(estadoParaColor, responsabilidad, aseguradora);
               const chipColor = getProcessChipColor(estadoParaColor, responsabilidad, aseguradora);
               const rawRegistro =
                 procesosRaw && procesosRaw.length > 0
@@ -323,11 +338,25 @@ const ProcessTable = memo(({ processes, onDelete, onView, procesosRaw, onPortalV
             (datosMostrar === processes ? (proceso as Process) : null);
 
           // Usar estado interno primero, si no está disponible usar público
-          const estadoParaColor = (estadoInterno && estadoInterno !== 'Sin estado') 
-            ? estadoInterno 
-            : (estadoPublico && estadoPublico !== 'Sin estado' ? estadoPublico : '');
-          
-          const colorBorde = getProcessBorderColor(estadoParaColor, responsabilidad, aseguradora);
+                 const estadoParaColor = (estadoInterno && estadoInterno !== 'Sin estado') 
+                   ? estadoInterno 
+                   : (estadoPublico && estadoPublico !== 'Sin estado' ? estadoPublico : '');
+                 
+                 // Verificar si alguno de los estados es finalizado (tiene máxima prioridad)
+                 const esFinalizado = 
+                   (estadoInterno && estadoInterno !== 'Sin estado' && 
+                    ['finalizado', 'cerrado', 'inactivo', 'final', 'terminado'].some(s => 
+                      estadoInterno.toLowerCase().includes(s.toLowerCase())
+                    )) ||
+                   (estadoPublico && estadoPublico !== 'Sin estado' && 
+                    ['finalizado', 'cerrado', 'inactivo', 'final', 'terminado'].some(s => 
+                      estadoPublico.toLowerCase().includes(s.toLowerCase())
+                    ));
+                 
+                 // Si es finalizado, forzar el color verde (máxima prioridad)
+                 const colorBorde = esFinalizado 
+                   ? 'border-l-4 border-emerald-500'
+                   : getProcessBorderColor(estadoParaColor, responsabilidad, aseguradora);
           const chipColor = getProcessChipColor(estadoParaColor, responsabilidad, aseguradora);
 
           return (

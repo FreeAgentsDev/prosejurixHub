@@ -29,12 +29,27 @@ const AdminLogin = () => {
   };
 
   const handleLogin = async (usuario: string, password: string) => {
-    // Validar credenciales
-    if (usuario !== 'admin' || password !== 'prosejurix2024') {
+    // Validar credenciales desde variables de entorno
+    const adminUser = import.meta.env.VITE_ADMIN_USER || 'admin';
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+    
+    // Si no hay contraseña configurada, usar la por defecto (solo para desarrollo)
+    const expectedPassword = adminPassword || (import.meta.env.DEV ? 'prosejurix2024' : '');
+    
+    if (!expectedPassword) {
+      notify({
+        type: 'error',
+        title: 'Error de configuración',
+        message: 'Las credenciales de administrador no están configuradas.'
+      });
+      return;
+    }
+    
+    if (usuario !== adminUser || password !== expectedPassword) {
       notify({
         type: 'warning',
         title: 'Credenciales incorrectas',
-        message: 'Usa admin / prosejurix2024 para ingresar.'
+        message: 'Usuario o contraseña incorrectos.'
       });
       return;
     }
@@ -68,7 +83,6 @@ const AdminLogin = () => {
       // Navegar al dashboard
       navigate('/admin/procesos');
     } catch (error) {
-      console.error('Error en login:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       notify({
         type: 'error',

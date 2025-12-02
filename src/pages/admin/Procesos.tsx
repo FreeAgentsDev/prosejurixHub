@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, LogOut } from 'lucide-react';
+import { Plus, LogOut, CheckCircle } from 'lucide-react';
 import DashboardCards from '../../components/admin/DashboardCards';
 import ProcessTable from '../../components/admin/ProcessTable';
 import SearchBar from '../../components/common/SearchBar';
@@ -12,6 +12,8 @@ import { mockClientes, estadosInternos, MockProceso } from '../../data/mocks';
 import { useProcesses } from '../../hooks/useProcesses';
 import { useNotifications } from '../../components/common/NotificationProvider';
 import { useConfirm } from '../../components/common/ConfirmProvider';
+import { getValue, getClientName, getProcessId, getPublicState, getInternalState, formatDate } from '../../utils/dataHelpers';
+import { logger } from '../../utils/logger';
 
 const normalizeText = (value: string): string =>
   value
@@ -127,6 +129,7 @@ const Procesos = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [showPortalModal, setShowPortalModal] = useState(false);
+  const [showFinalizadosModal, setShowFinalizadosModal] = useState(false);
   const [portalPreviewData, setPortalPreviewData] = useState<{
     clientName: string;
     clientCedula?: string | null;
@@ -142,12 +145,6 @@ const Procesos = () => {
   const clientes = mockClientes;
 
   // Helper para leer valores desde tabla cruda o mock
-  const getValue = (obj: any, ...keys: string[]): any => {
-    for (const key of keys) {
-      if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') return obj[key];
-    }
-    return null;
-  };
 
   const getClientIdValue = (obj: any): string | number | null => {
     return (
@@ -202,13 +199,43 @@ const Procesos = () => {
 
     let activos = 0, finalizados = 0, enRevision = 0, enNegociacion = 0;
     for (const p of origin) {
-      const estado = String(getValue(p, 'estado', 'Estado', 'ESTADO') ?? p.estado ?? '').toLowerCase();
-      const estadoPublico = String(getValue(p, 'estado_publico', 'estadoPublico', 'ESTADO_PUBLICO') ?? p.estadoPublico ?? '').toLowerCase();
-
-      if (estado === 'activo') activos++;
-      if (estado === 'finalizado' || estado === 'cerrado') finalizados++;
-      if (estado === 'en_espera' || estado.includes('revision') || estado.includes('revisión')) enRevision++;
-      if (estadoPublico.includes('negociacion') || estadoPublico.includes('negociación')) enNegociacion++;
+      // Obtener estados desde múltiples campos posibles
+      const estadoInterno = String(getValue(p, 'estado_interno', 'estadoInterno', 'ESTADO_INTERNO', 'estado', 'Estado', 'ESTADO') ?? '').toLowerCase().trim();
+      const estadoPublico = String(getValue(p, 'estado_publico', 'estadoPublico', 'ESTADO_PUBLICO') ?? '').toLowerCase().trim();
+      const estadoProceso = String(getValue(p, 'estado_proceso', 'estadoProceso', 'ESTADO_PROCESO') ?? '').toLowerCase().trim();
+      
+      // Usar el primer estado disponible (prioridad: interno > público > proceso)
+      const estado = estadoInterno || estadoPublico || estadoProceso || '';
+      
+      // Determinar si está finalizado (tiene prioridad)
+      const esFinalizado = estado.includes('finalizado') || estado.includes('cerrado') || estado.includes('inactivo') || estado.includes('terminado');
+      
+      // Determinar si está en revisión
+      const esEnRevision = estado.includes('revision') || estado.includes('revisión') || estado.includes('en_espera') || estado.includes('espera') || estado.includes('pendiente');
+      
+      // Determinar si está en negociación
+      const esEnNegociacion = estadoPublico.includes('negociacion') || estadoPublico.includes('negociación') || estado.includes('negociacion') || estado.includes('negociación');
+      
+      // Contar finalizados
+      if (esFinalizado) {
+        finalizados++;
+      }
+      // Contar en revisión
+      else if (esEnRevision) {
+        enRevision++;
+      }
+      // Contar en negociación
+      else if (esEnNegociacion) {
+        enNegociacion++;
+      }
+      // Si no está finalizado, está activo (por defecto)
+      else if (estado && !esFinalizado) {
+        activos++;
+      }
+      // Si no hay estado definido, considerar como activo
+      else if (!estado) {
+        activos++;
+      }
     }
 
     return {
@@ -220,6 +247,18 @@ const Procesos = () => {
       totalClientes: clientes.length
     };
   }, [procesos, procesosRaw, clientes]);
+
+  // Filtrar procesos finalizados
+  const procesosFinalizados = useMemo(() => {
+    const origin = (procesosRaw && procesosRaw.length > 0) ? procesosRaw : procesos;
+    return origin.filter((p: any) => {
+      const estadoInterno = String(getValue(p, 'estado_interno', 'estadoInterno', 'ESTADO_INTERNO', 'estado', 'Estado', 'ESTADO') ?? '').toLowerCase().trim();
+      const estadoPublico = String(getValue(p, 'estado_publico', 'estadoPublico', 'ESTADO_PUBLICO') ?? '').toLowerCase().trim();
+      const estadoProceso = String(getValue(p, 'estado_proceso', 'estadoProceso', 'ESTADO_PROCESO') ?? '').toLowerCase().trim();
+      const estado = estadoInterno || estadoPublico || estadoProceso || '';
+      return estado.includes('finalizado') || estado.includes('cerrado') || estado.includes('inactivo') || estado.includes('terminado');
+    });
+  }, [procesos, procesosRaw]);
 
   // Filtrar procesos por búsqueda (nombre y apellidos, insensible a mayúsculas/acentos)
   const filteredProcesos = useMemo(() => {
@@ -376,7 +415,7 @@ const Procesos = () => {
     // Obtener el ID del proceso desde diferentes posibles columnas
     const procId = proceso.ID || proceso.id || proceso.Id;
     if (!procId) {
-      console.error('❌ No se pudo determinar el ID del proceso para la navegación', proceso);
+      logger.error('No se pudo determinar el ID del proceso', 'Procesos', { proceso });
       notify({
         type: 'error',
         title: 'No se pudo abrir el proceso',
@@ -385,7 +424,7 @@ const Procesos = () => {
       return;
     }
 
-    console.log('🔍 Navegando a detalles con ID:', procId, 'Proceso completo:', proceso);
+    logger.debug('Navegando a detalles', 'Procesos', { id: procId });
     navigate(`/admin/procesos/${encodeURIComponent(String(procId))}?mode=view`);
   };
 
@@ -408,7 +447,7 @@ const Procesos = () => {
         message: 'El proceso fue eliminado correctamente.'
       });
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error en Procesos', 'Procesos', error);
       notify({
         type: 'error',
         title: 'No se pudo eliminar',
@@ -550,7 +589,7 @@ const Procesos = () => {
         if (data.ciudad) nuevoProceso.ciudad = data.ciudad;
         if (data.radicado) nuevoProceso.radicado = data.radicado;
         
-        console.log('📝 Creando nuevo proceso con todos los campos:', nuevoProceso);
+        logger.debug('Creando nuevo proceso', 'Procesos');
         await createProcess(nuevoProceso);
         action = 'create';
       }
@@ -569,7 +608,7 @@ const Procesos = () => {
         });
       }
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error en Procesos', 'Procesos', error);
       notify({
         type: 'error',
         title: 'No se pudo guardar',
@@ -660,6 +699,10 @@ const Procesos = () => {
           procesosEnNegociacion={stats.procesosEnNegociacion}
           procesosFinalizados={stats.procesosFinalizados}
           procesosEnRevision={stats.procesosEnRevision}
+          onFinalizadosClick={() => {
+            console.log('Click en Finalizados, abriendo modal...');
+            setShowFinalizadosModal(true);
+          }}
         />
 
         <div className="mb-8 flex flex-col gap-5 lg:flex-row">
@@ -852,6 +895,90 @@ const Procesos = () => {
             Selecciona un cliente para visualizar su portal.
           </div>
         )}
+      </Modal>
+
+      {/* Modal de Procesos Finalizados */}
+      <Modal
+        isOpen={showFinalizadosModal}
+        onClose={() => setShowFinalizadosModal(false)}
+        title={`Procesos Finalizados (${procesosFinalizados.length})`}
+        className="max-w-6xl"
+      >
+        <div className="overflow-y-auto max-h-[70vh]">
+          {procesosFinalizados.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full bg-emerald-100 p-4 mb-4">
+                <CheckCircle className="h-12 w-12 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">No hay procesos finalizados</h3>
+              <p className="text-sm text-slate-600">Todos los procesos están activos o en gestión.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 p-4">
+              {procesosFinalizados.map((proceso: any, index: number) => {
+                const idProceso = getProcessId(proceso);
+                const nombreCliente = getClientName(proceso);
+                const estadoPublico = getPublicState(proceso);
+                const estadoInterno = getInternalState(proceso);
+                const fechaIngreso = getValue(proceso, 'fecha_ingreso', 'fechaIngreso', 'FECHA_INGRESO', 'fecha', 'Fecha', 'FECHA');
+                
+                return (
+                  <div
+                    key={idProceso || index}
+                    className="group rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm transition hover:bg-emerald-50 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm">
+                            <CheckCircle className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-slate-900">{nombreCliente}</h4>
+                            <p className="text-xs text-slate-500">ID: #{String(idProceso)}</p>
+                          </div>
+                        </div>
+                        <div className="ml-12 space-y-1">
+                          {estadoPublico && estadoPublico !== 'Sin estado' && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-slate-600">Estado público:</span>
+                              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                                {estadoPublico}
+                              </span>
+                            </div>
+                          )}
+                          {estadoInterno && estadoInterno !== 'Sin estado' && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-slate-600">Estado interno:</span>
+                              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                                {estadoInterno}
+                              </span>
+                            </div>
+                          )}
+                          {fechaIngreso && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-slate-600">Fecha de ingreso:</span>
+                              <span className="text-xs text-slate-700">{formatDate(fechaIngreso)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowFinalizadosModal(false);
+                          handleView(proceso);
+                        }}
+                        className="rounded-lg bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-200"
+                      >
+                        Ver detalles
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

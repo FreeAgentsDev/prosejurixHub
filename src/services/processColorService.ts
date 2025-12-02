@@ -23,7 +23,12 @@ const normalizeText = (text: string): string => {
 const isFinalizedState = (estado: string | null | undefined): boolean => {
   if (!estado) return false;
   const normalized = normalizeText(String(estado));
-  return PROCESS_STATES.FINALIZADO.some(state => normalized.includes(state));
+  // Verificar si el estado normalizado coincide exactamente o contiene alguna palabra clave de finalizado
+  return PROCESS_STATES.FINALIZADO.some(state => {
+    const stateNormalized = normalizeText(state);
+    // Coincidencia exacta o contiene la palabra clave
+    return normalized === stateNormalized || normalized.includes(stateNormalized);
+  });
 };
 
 /**

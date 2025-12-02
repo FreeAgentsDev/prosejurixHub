@@ -4,6 +4,8 @@ import { FileText, Eye, LogOut, UserCircle2, Calendar, BadgeCheck, Upload, Downl
 import Table from '../common/Table';
 import { useNotifications } from '../common/NotificationProvider';
 import { supabase } from '../../lib/supabase';
+import { getValue } from '../../utils/dataHelpers';
+import { logger } from '../../utils/logger';
 
 interface Process {
   id: number | string;
@@ -106,7 +108,7 @@ const ClientProcessView = ({
 
       setUploadedFiles(formatted);
     } catch (err) {
-      console.error(err);
+      logger.error('Error en ClientProcessView', 'ClientProcessView', err);
       setFilesError('Ocurrió un error inesperado al obtener los archivos.');
     } finally {
       setFilesLoading(false);
@@ -117,15 +119,6 @@ const ClientProcessView = ({
     if (!supabase) return;
     loadUploadedFiles();
   }, [loadUploadedFiles]);
-
-  const getValue = (obj: any, ...keys: string[]): any => {
-    for (const key of keys) {
-      if (key && obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
-        return obj[key];
-      }
-    }
-    return null;
-  };
 
   const hasMeaningfulValue = React.useCallback(
     (key: string) => datosMostrar?.some((item) => item && item[key] !== undefined && item[key] !== null && item[key] !== ''),
@@ -479,7 +472,7 @@ const ClientProcessView = ({
               printWindow.focus();
               printWindow.print();
             } catch (printErr) {
-              console.error(printErr);
+              logger.error('Error al imprimir', 'ClientProcessView', printErr);
             }
           }, 500);
         });

@@ -12,7 +12,7 @@ const ClienteLogin = () => {
     try {
       // Validar que supabase esté inicializado
       if (!supabase) {
-        console.error('❌ Supabase no está inicializado');
+        logger.error('Supabase no está inicializado', 'ClienteLogin');
         notify({
           type: 'error',
           title: 'Error de conexión',
@@ -36,14 +36,14 @@ const ClienteLogin = () => {
       const tableName = 'CTRANTECEDENTES';
       
       // Primero, obtener un registro para ver la estructura real de la tabla
-      console.log('🔍 Obteniendo estructura de la tabla...');
+      logger.debug('Obteniendo estructura de la tabla', 'ClienteLogin');
       const { data: sampleData, error: sampleError } = await supabase
         .from(tableName)
         .select('*')
         .limit(1);
       
       if (sampleError) {
-        console.error('❌ Error al acceder a la tabla:', sampleError);
+        logger.error('Error al acceder a la tabla', 'ClienteLogin', sampleError);
         if (sampleError.message?.includes('relation') || sampleError.message?.includes('does not exist')) {
           notify({
             type: 'error',
@@ -70,7 +70,7 @@ const ClienteLogin = () => {
       let clienteIdColumnName: string | null = null;
       if (sampleData && sampleData.length > 0) {
         const columnas = Object.keys(sampleData[0]);
-        console.log('📋 Columnas disponibles en la tabla:', columnas);
+        logger.debug('Columnas disponibles', 'ClienteLogin', { count: columnas.length });
         
         // Buscar el nombre de la columna cliente_id (puede estar en diferentes formatos)
         const posiblesNombresClienteId = [
@@ -104,15 +104,15 @@ const ClienteLogin = () => {
           }
         }
         
-        console.log(`✅ Columna cliente_id encontrada: "${clienteIdColumnName}"`);
+        logger.debug('Columna cliente_id encontrada', 'ClienteLogin', { column: clienteIdColumnName });
       } else {
         // Si no hay datos, intentar con nombres comunes
         clienteIdColumnName = 'cliente_id';
-        console.log('⚠️ Tabla vacía, usando nombre de columna por defecto: "cliente_id"');
+        logger.debug('Usando nombre de columna por defecto', 'ClienteLogin');
       }
       
       // Buscar todos los procesos del cliente por cliente_id (o columna fallback)
-      console.log('🔎 Buscando procesos del cliente...', { tableName, clienteIdColumn: clienteIdColumnName, clienteId });
+      logger.debug('Buscando procesos del cliente', 'ClienteLogin', { clienteId });
       let { data: procesosCliente, error: queryError } = await supabase
         .from(tableName)
         .select('*')
@@ -127,7 +127,7 @@ const ClienteLogin = () => {
       }
       
       if (queryError) {
-        console.error('❌ Error en la consulta:', queryError);
+        logger.error('Error en la consulta', 'ClienteLogin', queryError);
         notify({
           type: 'error',
           title: 'Consulta fallida',
@@ -146,8 +146,7 @@ const ClienteLogin = () => {
         return;
       }
 
-      console.log(`✅ Procesos encontrados para el cliente ${clienteId}: ${procesosCliente.length}`);
-      console.log('📊 Procesos encontrados (por cliente_id/ID):', procesosCliente);
+      logger.debug('Procesos encontrados', 'ClienteLogin', { count: procesosCliente.length, clienteId });
 
       // Obtener información del cliente del primer proceso
       const primerProceso = procesosCliente[0];
@@ -220,14 +219,16 @@ const ClienteLogin = () => {
           if (combinados.length > 0) {
             procesosPorCedula = combinados;
           }
-          console.log(`🔎 Búsqueda por cédula en ${posiblesCedulaCols.length} columnas → ${procesosPorCedula.length} filas`);
+          logger.debug('Búsqueda por cédula', 'ClienteLogin', { 
+            columns: posiblesCedulaCols.length, 
+            results: procesosPorCedula.length 
+          });
         } catch (e) {
           console.warn('⚠️ Error buscando por cédula, se usan resultados por ID únicamente:', e);
         }
       }
 
-      console.log(`✅ Procesos totales a mostrar: ${procesosPorCedula.length}`);
-      console.log('📋 IDs de procesos:', procesosPorCedula.map((p: any) => p.ID || p.id || p.Id || p.procesoId));
+      logger.debug('Procesos totales a mostrar', 'ClienteLogin', { count: procesosPorCedula.length });
 
       navigate('/portal/proceso', {
         state: { 
@@ -237,9 +238,8 @@ const ClienteLogin = () => {
         }
       });
     } catch (error) {
-      console.error('❌ Error inesperado en login:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      console.error('Detalles del error:', errorMessage);
+      logger.error('Error inesperado en login', 'ClienteLogin', error);
       notify({
         type: 'error',
         title: 'Error inesperado',

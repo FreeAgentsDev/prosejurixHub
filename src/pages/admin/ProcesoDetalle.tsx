@@ -10,6 +10,8 @@ import { useNotifications } from '../../components/common/NotificationProvider';
 import { ControlProcesoAntecedente } from '../../types/supabase';
 import { supabase } from '../../lib/supabase';
 import { detectTableAndIdType } from '../../lib/supabaseInspector';
+import { getValue, normalizeKey, formatDate } from '../../utils/dataHelpers';
+import { logger } from '../../utils/logger';
 
 const ProcesoDetalle = () => {
   const { id } = useParams();
@@ -25,28 +27,6 @@ const ProcesoDetalle = () => {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(mode === 'edit');
 
-  // Función helper para obtener valores de diferentes posibles nombres de columna
-  const getValue = (obj: any, ...keys: string[]): any => {
-    for (const key of keys) {
-      if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
-        return obj[key];
-      }
-    }
-    return null;
-  };
-
-  const formatDate = (value: string | null | undefined) => {
-    if (!value) return 'No especificado';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return String(value);
-    }
-    return date.toLocaleDateString('es-CO', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   const fetchProcessById = async (targetId: string): Promise<ControlProcesoAntecedente | null> => {
     if (!supabase) {
@@ -94,7 +74,7 @@ const ProcesoDetalle = () => {
 
       // Decodificar el ID si viene codificado en la URL
       const decodedId = decodeURIComponent(id);
-      console.log('🔍 Buscando proceso con ID:', decodedId);
+      logger.debug('Buscando proceso con ID', 'ProcesoDetalle', { id: decodedId });
 
       setIsLoading(true);
       setError(null);
@@ -103,18 +83,18 @@ const ProcesoDetalle = () => {
         const procesoData = await fetchProcessById(decodedId);
 
         if (procesoData) {
-          console.log('✅ Usando datos encontrados en Supabase');
+          logger.debug('Proceso encontrado en Supabase', 'ProcesoDetalle');
           setRawProcessData(procesoData);
           const transformedProcess = transformSupabaseToMock(procesoData);
           setProceso(transformedProcess);
         } else {
-          console.error('❌ No se encontró el proceso en Supabase');
+          logger.warn('No se encontró el proceso en Supabase', 'ProcesoDetalle', { id: decodedId });
           setError(`No se encontró el proceso con el ID "${decodedId}". Verifica que el ID sea correcto.`);
           setProceso(null);
           setRawProcessData(null);
         }
       } catch (err) {
-        console.error('Error al cargar proceso:', err);
+        logger.error('Error al cargar proceso', 'ProcesoDetalle', err);
         const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
         
         // Mensaje de error más descriptivo
@@ -249,14 +229,7 @@ const ProcesoDetalle = () => {
   };
 
   // Normalizador de claves para evitar duplicados por acentos o formatos
-  const normalizeKey = (key: string): string => {
-    return String(key)
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/\p{Diacritic}/gu, '') // quita acentos
-      .replace(/[^a-z0-9]+/g, '_')     // reemplaza separadores por _
-      .replace(/^_+|_+$/g, '');        // recorta guiones bajos extremos
-  };
+  // normalizeKey ahora viene de dataHelpers
 
   // Conjunto de claves que ya se muestran arriba (sin duplicados, normalizadas)
   const shownKeysNormalized = new Set<string>([
@@ -277,7 +250,7 @@ const ProcesoDetalle = () => {
     'fecha','fecha_accidente','fecha_ingreso','created_at','fecha_radicacion','fecha_renuncia','fecha_reclamacion',
     // Responsabilidad y aseguradora
     'responsabilidad','aseguradora',
-  ]);
+  ].map(key => normalizeKey(key))); // Normalizar todas las claves
 
   // UI helpers: chips de color para estado y tipo
   const chipClass =
@@ -408,7 +381,7 @@ const ProcesoDetalle = () => {
             setProceso(transformedProcess);
           }
         } catch (err) {
-          console.error('Error al recargar proceso:', err);
+          logger.error('Error al recargar proceso', 'ProcesoDetalle', err);
         }
       }
       
@@ -421,7 +394,7 @@ const ProcesoDetalle = () => {
         message: 'Los cambios del proceso se guardaron correctamente.'
       });
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error al guardar proceso', 'ProcesoDetalle', error);
       notify({
         type: 'error',
         title: 'No se pudo actualizar',

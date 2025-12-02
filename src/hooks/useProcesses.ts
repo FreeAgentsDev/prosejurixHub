@@ -2,49 +2,8 @@ import { useState, useEffect } from 'react';
 import { MockProceso } from '../data/mocks';
 import { supabase } from '../lib/supabase';
 import { detectTableAndIdType, TableInfo } from '../lib/supabaseInspector';
-
-// Función helper para obtener un valor de un objeto usando múltiples posibles nombres de claves
-const getValue = (obj: any, ...keys: string[]): any => {
-  for (const key of keys) {
-    if (obj[key] !== undefined && obj[key] !== null) {
-      return obj[key];
-    }
-  }
-  return null;
-};
-
-const normalizeKey = (key: string): string =>
-  String(key)
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^a-z0-9]+/g, '');
-
-const resolveColumnName = (sampleRecord: any, candidates: string[]): string | null => {
-  if (!sampleRecord) return null;
-
-  const recordKeys = Object.keys(sampleRecord);
-
-  for (const candidate of candidates) {
-    if (recordKeys.includes(candidate)) {
-      return candidate;
-    }
-  }
-
-  const normalizedKeysMap = new Map<string, string>();
-  for (const key of recordKeys) {
-    normalizedKeysMap.set(normalizeKey(key), key);
-  }
-
-  for (const candidate of candidates) {
-    const normalizedCandidate = normalizeKey(candidate);
-    if (normalizedKeysMap.has(normalizedCandidate)) {
-      return normalizedKeysMap.get(normalizedCandidate)!;
-    }
-  }
-
-  return null;
-};
+import { getValue, normalizeKey, resolveColumnName } from '../utils/dataHelpers';
+import { logger } from '../utils/logger';
 
 // Función para transformar datos de Supabase al formato MockProceso
 // Esta función es flexible y detecta automáticamente los nombres de columnas
@@ -199,7 +158,7 @@ export const useProcesses = () => {
       setTableInfo(info);
       return info;
     } catch (err) {
-      console.error('❌ Error al detectar información de la tabla:', err);
+      logger.error('Error al detectar información de la tabla', 'useProcesses', err);
       throw err;
     }
   };
@@ -279,11 +238,7 @@ export const useProcesses = () => {
           .select('*');
 
         if (supabaseError) {
-          console.error('❌ Error de Supabase:', supabaseError);
-          console.error('Código:', supabaseError.code);
-          console.error('Mensaje:', supabaseError.message);
-          console.error('Detalles:', supabaseError.details);
-          console.error('Hint:', supabaseError.hint);
+          logger.error('Error de Supabase al obtener datos', 'useProcesses', supabaseError);
 
           // Mejorar mensaje de error si la tabla no existe o columnas incorrectas
           if (supabaseError.message?.includes('relation') || supabaseError.message?.includes('does not exist')) {
@@ -313,10 +268,10 @@ export const useProcesses = () => {
 
         // Mostrar en consola las columnas disponibles para debug
         if (rawData && rawData.length > 0) {
-          console.log('✅ Datos obtenidos de Supabase exitosamente');
-          console.log(`📊 Total de registros: ${rawData.length}`);
-          console.log('📋 Columnas disponibles en el primer registro:', Object.keys(rawData[0]));
-          console.log('📄 Primer registro completo:', rawData[0]);
+          logger.debug('Datos obtenidos de Supabase exitosamente', 'useProcesses', {
+            totalRecords: rawData.length,
+            columns: rawData.length > 0 ? Object.keys(rawData[0]) : []
+          });
         } else {
           console.warn('⚠️ No se encontraron datos en Supabase (tabla vacía)');
         }
@@ -329,7 +284,7 @@ export const useProcesses = () => {
           setProcesosRaw(data);
           // Transformar los datos de Supabase al formato esperado
           const transformedProcesses = data.map(transformSupabaseToMock);
-          console.log(`✅ ${transformedProcesses.length} procesos transformados y listos para mostrar`);
+          logger.debug(`${transformedProcesses.length} procesos transformados`, 'useProcesses');
           setProcesos(transformedProcesses);
         } else {
           // Si no hay datos en Supabase, mostrar mensaje pero no usar mocks
@@ -339,7 +294,7 @@ export const useProcesses = () => {
           setError('La tabla de procesos está vacía. Crea tu primer proceso para comenzar.');
         }
       } catch (err) {
-        console.error('❌ Error al cargar procesos desde Supabase:', err);
+        logger.error('Error al cargar procesos desde Supabase', 'useProcesses', err);
         const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
         setError(errorMessage);
         // En caso de error, no usar mocks - mostrar error real
@@ -453,7 +408,7 @@ export const useProcesses = () => {
       setField(processData.correoElectronico, 'correo_electronico', 'CORREO ELECTRÓNICO', 'CORREO ELECTRONICO', 'correo', 'CORREO');
       setField(processData.direccion, 'direccion', 'DIRECCIÓN', 'DIRECCION');
 
-      console.log('📝 Creando proceso directamente en Supabase:', insertData);
+      logger.debug('Creando proceso en Supabase', 'useProcesses');
 
       const { data: insertedData, error: insertError } = await supabase
         .from(info.tableName)
@@ -462,7 +417,7 @@ export const useProcesses = () => {
         .single();
 
       if (insertError) {
-        console.error('Error de Supabase al crear proceso:', insertError);
+        logger.error('Error de Supabase al crear proceso', 'useProcesses', insertError);
         throw new Error(insertError.message);
       }
 
@@ -474,7 +429,7 @@ export const useProcesses = () => {
       await refreshProcesses();
       return newProcess;
     } catch (err) {
-      console.error('Error al crear proceso:', err);
+      logger.error('Error al crear proceso', 'useProcesses', err);
       throw err;
     }
   };
@@ -554,7 +509,7 @@ export const useProcesses = () => {
         filterValue = id;
       }
 
-      console.log('📝 Actualizando proceso directamente en Supabase:', { column: info.idColumnName, value: filterValue, updates: updateData });
+      logger.debug('Actualizando proceso en Supabase', 'useProcesses');
 
       const { error: updateError } = await supabase
         .from(info.tableName)
@@ -562,13 +517,13 @@ export const useProcesses = () => {
         .eq(info.idColumnName, filterValue);
 
       if (updateError) {
-        console.error('Error de Supabase al actualizar proceso:', updateError);
+        logger.error('Error de Supabase al actualizar proceso', 'useProcesses', updateError);
         throw new Error(updateError.message);
       }
 
       await refreshProcesses();
     } catch (err) {
-      console.error('Error al actualizar proceso:', err);
+      logger.error('Error al actualizar proceso', 'useProcesses', err);
       throw err;
     }
   };
@@ -592,7 +547,7 @@ export const useProcesses = () => {
         filterValue = id;
       }
 
-      console.log('🗑️ Eliminando proceso directamente en Supabase:', { column: info.idColumnName, value: filterValue });
+      logger.debug('Eliminando proceso de Supabase', 'useProcesses');
 
       const { error: deleteError } = await supabase
         .from(info.tableName)
@@ -600,13 +555,13 @@ export const useProcesses = () => {
         .eq(info.idColumnName, filterValue);
 
       if (deleteError) {
-        console.error('Error de Supabase al eliminar proceso:', deleteError);
+        logger.error('Error de Supabase al eliminar proceso', 'useProcesses', deleteError);
         throw new Error(deleteError.message);
       }
 
       await refreshProcesses();
     } catch (err) {
-      console.error('Error al eliminar proceso:', err);
+      logger.error('Error al eliminar proceso', 'useProcesses', err);
       throw err;
     }
   };
@@ -639,7 +594,7 @@ export const useProcesses = () => {
         setProcesos([]);
       }
     } catch (err) {
-      console.error('Error al refrescar procesos:', err);
+      logger.error('Error al refrescar procesos', 'useProcesses', err);
     }
   };
 
