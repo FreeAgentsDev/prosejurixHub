@@ -101,6 +101,7 @@ export const transformSupabaseToMock = (data: any): MockProceso => {
   const aseguradora = getValue(data, 'aseguradora', 'Aseguradora', 'ASEGURADORA') || undefined;
   const actuacion = getValue(data, 'actuacion', 'Actuacion', 'ACTUACIÓN', 'ACTUACION') || undefined;
   const fechaReclamacion = getValue(data, 'fecha_reclamacion', 'Fecha Reclamación', 'FECHA RECLAMACIÓN', 'FECHA RECLAMACION') || undefined;
+  const fechaRenuncia = getValue(data, 'fecha_renuncia', 'Fecha Renuncia', 'FECHA RENUNCIA', 'FECHA_RENUNCIA') || undefined;
   const conciliacion = getValue(data, 'conciliacion', 'Conciliacion', 'CONCILIACIÓN', 'CONCILIACION') || undefined;
   const fechaPresentacionDemanda = getValue(
     data,
@@ -168,6 +169,7 @@ export const transformSupabaseToMock = (data: any): MockProceso => {
     aseguradora,
     actuacion,
     fechaReclamacion,
+    fechaRenuncia,
     conciliacion,
     fechaPresentacionDemanda,
     radicado1,
@@ -530,6 +532,7 @@ export const useProcesses = () => {
       setField(updates.aseguradora, 'aseguradora', 'ASEGURADORA');
       setField(updates.actuacion, 'actuacion', 'ACTUACIÓN', 'ACTUACION');
       setField(updates.fechaReclamacion, 'fecha_reclamacion', 'FECHA RECLAMACIÓN', 'FECHA RECLAMACION');
+      setField(updates.fechaRenuncia, 'fecha_renuncia', 'FECHA RENUNCIA', 'FECHA_RENUNCIA');
       setField(updates.conciliacion, 'conciliacion', 'CONCILIACIÓN', 'CONCILIACION');
       setField(updates.fechaPresentacionDemanda, 'fecha_presentacion_demanda', 'FECHA PRESENTACIÓN DEMANDA', 'FECHA PRESENTACION DEMANDA');
       setField(updates.radicado, 'radicado', 'RADICADO');

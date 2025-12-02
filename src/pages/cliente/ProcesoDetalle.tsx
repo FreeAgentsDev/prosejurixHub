@@ -167,6 +167,95 @@ const ProcesoDetalleCliente = () => {
   const demandado = getValue(proceso, 'demandado', 'Demandado', 'DEMANDADO') || '';
   const juzgado = getValue(proceso, 'juzgado', 'Juzgado', 'JUZGADO') || '';
   const radicado = getValue(proceso, 'RADICADO', 'radicado', 'Radicado') || '';
+  const responsabilidad = getValue(proceso, 'responsabilidad', 'Responsabilidad', 'RESPONSABILIDAD') || '';
+  const aseguradora = getValue(proceso, 'aseguradora', 'ASEGURADORA', 'Aseguradora') || '';
+  const caducidad = getValue(proceso, 'caducidad', 'CADUCIDAD') || '';
+  const fechaRenuncia = getValue(proceso, 'fecha_renuncia', 'FECHA RENUNCIA', 'FECHA_RENUNCIA', 'fechaRenuncia') || '';
+  const fechaReclamacion = getValue(proceso, 'fecha_reclamacion', 'FECHA RECLAMACIÓN', 'FECHA RECLAMACION', 'fechaReclamacion') || '';
+  const conciliacion = getValue(proceso, 'conciliacion', 'CONCILIACIÓN', 'CONCILIACION') || '';
+  const fechaPresentacionDemanda = getValue(proceso, 'fecha_presentacion_demanda', 'FECHA PRESENTACIÓN DEMANDA', 'FECHA PRESENTACION DEMANDA', 'fechaPresentacionDemanda') || '';
+
+  // Función para obtener el texto del flujo de proceso
+  const obtenerFlujoProceso = (responsabilidad: string | null | undefined): string => {
+    const responsabilidadLower = String(responsabilidad || '').toLowerCase();
+    
+    if (responsabilidadLower.includes('extracontractual') || responsabilidadLower.includes('extra-contractual')) {
+      return 'Extra-contractual: Hasta 5 años';
+    } else if (responsabilidadLower.includes('contractual')) {
+      return 'Contractual: 2 años';
+    } else if (responsabilidadLower.includes('reparación directa') || responsabilidadLower.includes('reparacion directa')) {
+      return 'Reparación directa: 2 años';
+    }
+    
+    return 'No especificado';
+  };
+
+  // Función para verificar si está cerca de caducar (menos de 6 meses)
+  const estaCercaDeCaducar = (caducidad: string | null | undefined): boolean => {
+    if (!caducidad) return false;
+    const fechaCaducidad = new Date(caducidad);
+    if (Number.isNaN(fechaCaducidad.getTime())) return false;
+    
+    const hoy = new Date();
+    const seisMeses = new Date();
+    seisMeses.setMonth(seisMeses.getMonth() + 6);
+    
+    return fechaCaducidad <= seisMeses && fechaCaducidad >= hoy;
+  };
+
+  // Función para verificar si ya caducó
+  const yaCaduco = (caducidad: string | null | undefined): boolean => {
+    if (!caducidad) return false;
+    const fechaCaducidad = new Date(caducidad);
+    if (Number.isNaN(fechaCaducidad.getTime())) return false;
+    
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fechaCaducidad.setHours(0, 0, 0, 0);
+    
+    return fechaCaducidad < hoy;
+  };
+
+  // Función para determinar el color del estado según responsabilidad y estado
+  const estadoChipClass = (
+    estado: string | null | undefined,
+    responsabilidad?: string | null | undefined,
+    aseguradora?: string | null | undefined
+  ): string => {
+    const chipClass = 'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border';
+    const estadoLower = String(estado || '').toLowerCase();
+    const responsabilidadLower = String(responsabilidad || '').toLowerCase();
+    const aseguradoraValue = String(aseguradora || '').trim();
+    const tieneAseguradora = aseguradoraValue && aseguradoraValue.toLowerCase() !== 'n/a' && aseguradoraValue.toLowerCase() !== 'sin aseguradora';
+
+    // Verde → Finalizados
+    if (estadoLower.includes('final') || estadoLower.includes('cerrado') || estadoLower.includes('inactivo')) {
+      return `${chipClass} bg-emerald-50 text-emerald-700 border-emerald-200`;
+    }
+
+    // Rojo → Reparación directa / contractual
+    if (responsabilidadLower.includes('contractual') || responsabilidadLower.includes('reparación directa') || responsabilidadLower.includes('reparacion directa')) {
+      return `${chipClass} bg-red-50 text-red-700 border-red-200`;
+    }
+
+    // Rosado → Extra / aseguradora
+    if (responsabilidadLower.includes('extracontractual') && tieneAseguradora) {
+      return `${chipClass} bg-pink-50 text-pink-700 border-pink-200`;
+    }
+
+    // Cian → Extra / persona natural
+    if (responsabilidadLower.includes('extracontractual') && !tieneAseguradora) {
+      return `${chipClass} bg-cyan-50 text-cyan-700 border-cyan-200`;
+    }
+
+    // Fallback para otros estados
+    if (estadoLower.includes('espera') || estadoLower.includes('revision') || estadoLower.includes('revisión'))
+      return `${chipClass} bg-amber-50 text-amber-700 border-amber-200`;
+    if (estadoLower.includes('negoci')) return `${chipClass} bg-sky-50 text-sky-700 border-sky-200`;
+    if (estadoLower.includes('error') || estadoLower.includes('rechaz'))
+      return `${chipClass} bg-rose-50 text-rose-700 border-rose-200`;
+    return `${chipClass} bg-indigo-50 text-indigo-700 border-indigo-200`;
+  };
   
   // Campos adicionales
   const celular = getValue(proceso, 'celular', 'Celular', 'CELULAR', 'telefono_celular') || '';
@@ -240,8 +329,8 @@ const ProcesoDetalleCliente = () => {
                 <h2 className="text-2xl font-bold text-white">{String(procesoId)}</h2>
                 <p className="text-blue-100 text-sm mt-1">Información del Proceso</p>
               </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
-                <span className="text-white font-medium">{estado}</span>
+              <div className={`${estadoChipClass(estado, responsabilidad, aseguradora)}`}>
+                <span className="font-medium">{estado}</span>
               </div>
             </div>
           </div>
@@ -335,7 +424,9 @@ const ProcesoDetalleCliente = () => {
                   <Tag className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-xs font-medium text-slate-500">Estado</p>
-                    <p className="text-sm text-slate-900">{estado || 'No especificado'}</p>
+                    <span className={`mt-1 inline-flex ${estadoChipClass(estado, responsabilidad, aseguradora)}`}>
+                      {estado || 'No especificado'}
+                    </span>
                   </div>
                 </div>
                 {radicado && (
@@ -431,6 +522,72 @@ const ProcesoDetalleCliente = () => {
                     </div>
                   </div>
                 )}
+                {fechaRenuncia && (
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-slate-500">Fecha Renuncia Expresa</p>
+                      <p className="text-sm text-slate-900">
+                        {new Date(fechaRenuncia).toLocaleDateString('es-CO', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400 italic">Proceso → Renuncia expresa → Reclamación</p>
+                    </div>
+                  </div>
+                )}
+                {fechaReclamacion && (
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-slate-500">Fecha Reclamación</p>
+                      <p className="text-sm text-slate-900">
+                        {new Date(fechaReclamacion).toLocaleDateString('es-CO', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400 italic">Reclamación → Esperar antes (se necesitan todos los procesos / observaciones)</p>
+                    </div>
+                  </div>
+                )}
+                {caducidad && (
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-slate-500">
+                        Caducidad
+                        {responsabilidad && (
+                          <span className="ml-2 text-xs font-normal normal-case text-slate-400">
+                            ({obtenerFlujoProceso(responsabilidad)})
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className={`text-sm ${yaCaduco(caducidad) ? 'font-semibold text-red-600' : estaCercaDeCaducar(caducidad) ? 'font-semibold text-amber-600' : 'text-slate-900'}`}>
+                          {new Date(caducidad).toLocaleDateString('es-CO', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                        {yaCaduco(caducidad) && (
+                          <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                            Caducado
+                          </span>
+                        )}
+                        {estaCercaDeCaducar(caducidad) && !yaCaduco(caducidad) && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                            Próximo a caducar
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -505,6 +662,49 @@ const ProcesoDetalleCliente = () => {
                 </div>
               </div>
             )}
+
+            {/* Sección de información de flujo de proceso */}
+            <div className="mt-6 pt-6 border-t border-slate-200">
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm">
+                <header className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-blue-900">Flujo de Proceso</h3>
+                    <p className="text-xs text-blue-700">Información sobre el manejo de tu proceso</p>
+                  </div>
+                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                    Flujo
+                  </span>
+                </header>
+
+                <div className="space-y-3 text-xs text-blue-900">
+                  <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                    <p className="font-semibold mb-1">Flujo Principal:</p>
+                    <p className="text-blue-800">Proceso → Renuncia expresa → Reclamación</p>
+                    <p className="text-blue-800 mt-1">Conciliación → Demanda → Juzgados</p>
+                  </div>
+                  
+                  <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                    <p className="font-semibold mb-1">Actualizaciones:</p>
+                    <p className="text-blue-800">7 días → semana se actualizan todos</p>
+                  </div>
+
+                  {responsabilidad && (
+                    <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                      <p className="font-semibold mb-1">Flujo de Caducidad:</p>
+                      <p className="text-blue-800">{obtenerFlujoProceso(responsabilidad)}</p>
+                    </div>
+                  )}
+
+                  {fechaRenuncia && aseguradora && (
+                    <div className="rounded-lg border border-green-200 bg-green-50/80 p-3">
+                      <p className="font-semibold mb-1 text-green-800">✓ Información Completa:</p>
+                      <p className="text-green-700">Fecha de renuncia: {new Date(fechaRenuncia).toLocaleDateString('es-CO')}</p>
+                      <p className="text-green-700">Aseguradora: {aseguradora}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>

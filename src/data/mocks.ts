@@ -47,6 +47,7 @@ export interface MockProceso {
   ciudad3?: string;
   estadoProceso?: string;
   prestamos?: string;
+  fechaRenuncia?: string;
 }
 
 export interface MockCliente {

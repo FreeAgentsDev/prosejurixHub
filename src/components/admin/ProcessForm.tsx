@@ -46,6 +46,7 @@ interface ProcessFormData {
   valorPrestamos?: number;
   gastosAdicionales?: number;
   fechaRadicacion?: string;
+  fechaRenuncia?: string;
 }
 
 interface ProcessFormProps {
@@ -57,6 +58,50 @@ interface ProcessFormProps {
   clienteNombre?: string;
   clienteCedula?: string;
 }
+
+// Función helper para calcular la fecha de caducidad según el tipo de responsabilidad
+const calcularCaducidad = (fechaAccidente: string | undefined, responsabilidad: string | undefined): string | undefined => {
+  if (!fechaAccidente) return undefined;
+
+  const fecha = new Date(fechaAccidente);
+  if (Number.isNaN(fecha.getTime())) return undefined;
+
+  const responsabilidadLower = String(responsabilidad || '').toLowerCase();
+  let años = 0;
+
+  // Determinar años según el tipo de responsabilidad
+  if (responsabilidadLower.includes('extracontractual') || responsabilidadLower.includes('extra-contractual')) {
+    años = 5; // Extra-contractual: Hasta 5 años
+  } else if (responsabilidadLower.includes('contractual')) {
+    años = 2; // Contractuales: 2 años
+  } else if (responsabilidadLower.includes('reparación directa') || responsabilidadLower.includes('reparacion directa')) {
+    años = 2; // Reparación directa: 2 años
+  } else {
+    // Si no se especifica, no calcular
+    return undefined;
+  }
+
+  // Calcular fecha de caducidad sumando los años
+  const fechaCaducidad = new Date(fecha);
+  fechaCaducidad.setFullYear(fechaCaducidad.getFullYear() + años);
+  
+  return fechaCaducidad.toISOString().split('T')[0];
+};
+
+// Función para obtener el texto del flujo de proceso
+const obtenerFlujoProceso = (responsabilidad: string | undefined): string => {
+  const responsabilidadLower = String(responsabilidad || '').toLowerCase();
+  
+  if (responsabilidadLower.includes('extracontractual') || responsabilidadLower.includes('extra-contractual')) {
+    return 'Extra-contractual: Hasta 5 años';
+  } else if (responsabilidadLower.includes('contractual')) {
+    return 'Contractual: 2 años';
+  } else if (responsabilidadLower.includes('reparación directa') || responsabilidadLower.includes('reparacion directa')) {
+    return 'Reparación directa: 2 años';
+  }
+  
+  return 'No especificado';
+};
 
 const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, clienteNombre, clienteCedula }: ProcessFormProps) => {
   // Inicializar el formulario con los datos iniciales o valores por defecto
@@ -80,6 +125,16 @@ const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, cliente
       setFormData(initialData);
     }
   }, [initialData]);
+
+  // Calcular automáticamente la caducidad cuando cambien la fecha del accidente o la responsabilidad
+  useEffect(() => {
+    if (formData.fechaAccidente && formData.responsabilidad) {
+      const caducidadCalculada = calcularCaducidad(formData.fechaAccidente, formData.responsabilidad);
+      if (caducidadCalculada && (!formData.caducidad || formData.caducidad !== caducidadCalculada)) {
+        setFormData(prev => ({ ...prev, caducidad: caducidadCalculada }));
+      }
+    }
+  }, [formData.fechaAccidente, formData.responsabilidad]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,6 +332,18 @@ const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, cliente
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mt-4">
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Fecha renuncia expresa
+                </label>
+                <input
+                  type="date"
+                  value={formData.fechaRenuncia || ''}
+                  onChange={(e) => setFormData({ ...formData, fechaRenuncia: e.target.value })}
+                  className={inputClasses}
+                />
+                <p className="text-xs text-slate-400 italic">Proceso → Renuncia expresa → Reclamación</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   Fecha reclamación
                 </label>
                 <input
@@ -285,6 +352,7 @@ const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, cliente
                   onChange={(e) => setFormData({ ...formData, fechaReclamacion: e.target.value })}
                   className={inputClasses}
                 />
+                <p className="text-xs text-slate-400 italic">Reclamación → Esperar antes (se necesitan todos los procesos / observaciones)</p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -297,6 +365,7 @@ const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, cliente
                   className={inputClasses}
                   placeholder="Fechas o estado de conciliación"
                 />
+                <p className="text-xs text-slate-400 italic">Conciliación → Demanda → Juzgados</p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -311,6 +380,7 @@ const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, cliente
                   className={inputClasses}
                   placeholder="Fecha o estado de la demanda"
                 />
+                <p className="text-xs text-slate-400 italic">7 radicados → Juzgados → Correos</p>
               </div>
             </div>
 
@@ -368,6 +438,11 @@ const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, cliente
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   Caducidad
+                  {formData.responsabilidad && (
+                    <span className="ml-2 text-xs font-normal normal-case text-slate-400">
+                      ({obtenerFlujoProceso(formData.responsabilidad)})
+                    </span>
+                  )}
                 </label>
                 <input
                   type="date"
@@ -375,6 +450,11 @@ const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, cliente
                   onChange={(e) => setFormData({ ...formData, caducidad: e.target.value })}
                   className={inputClasses}
                 />
+                {formData.fechaAccidente && formData.responsabilidad && (
+                  <p className="text-xs text-slate-500 italic">
+                    Calculada automáticamente según el flujo de proceso
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -785,6 +865,7 @@ const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, cliente
                   className={inputClasses}
               placeholder="0.00"
             />
+            <p className="text-xs text-slate-400 italic">7 préstamos → flujo / ventaja</p>
           </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -806,6 +887,59 @@ const ProcessForm = ({ initialData, estadosInternos, onSubmit, onCancel, cliente
             />
           </div>
         </div>
+          </section>
+
+          {/* Sección de información de flujo de proceso */}
+          <section className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm sm:p-6">
+            <header className="mb-4 flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-blue-900">Flujo de Proceso y Reglas de Negocio</h4>
+                <p className="text-xs text-blue-700">Información importante sobre el manejo de procesos</p>
+              </div>
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                Flujo
+              </span>
+            </header>
+
+            <div className="space-y-3 text-xs text-blue-900">
+              <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                <p className="font-semibold mb-1">Flujo Principal:</p>
+                <p className="text-blue-800">Proceso → Renuncia expresa → Reclamación</p>
+                <p className="text-blue-800 mt-1">Conciliación → Demanda → Juzgados</p>
+              </div>
+              
+              <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                <p className="font-semibold mb-1">Reclamación:</p>
+                <p className="text-blue-800">Esperar antes de avanzar (se necesitan todos los procesos / observaciones)</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                  <p className="font-semibold mb-1">Actualizaciones:</p>
+                  <p className="text-blue-800">7 días → semana se actualizan todos</p>
+                </div>
+                
+                <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                  <p className="font-semibold mb-1">Préstamos:</p>
+                  <p className="text-blue-800">7 préstamos → flujo / ventaja</p>
+                </div>
+                
+                <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                  <p className="font-semibold mb-1">Radicados:</p>
+                  <p className="text-blue-800">7 radicados → Juzgados → Correos</p>
+                </div>
+                
+                <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                  <p className="font-semibold mb-1">Nota:</p>
+                  <p className="text-blue-800">100–120 (no a todos)</p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                <p className="font-semibold mb-1">Información Requerida:</p>
+                <p className="text-blue-800">Fecha de renuncia + Aseguradora</p>
+              </div>
+            </div>
           </section>
 
           <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">

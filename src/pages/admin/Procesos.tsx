@@ -447,6 +447,7 @@ const Procesos = () => {
           caducidad: data.caducidad ?? editingItem.caducidad,
           fechaQuerella: data.fechaQuerella ?? editingItem.fechaQuerella,
           fechaReclamacion: data.fechaReclamacion ?? editingItem.fechaReclamacion,
+          fechaRenuncia: data.fechaRenuncia ?? editingItem.fechaRenuncia,
           conciliacion: data.conciliacion ?? editingItem.conciliacion,
           fechaPresentacionDemanda:
             data.fechaPresentacionDemanda ?? editingItem.fechaPresentacionDemanda,
@@ -513,6 +514,7 @@ const Procesos = () => {
           caducidad: data.caducidad || undefined,
           fechaQuerella: data.fechaQuerella || undefined,
           fechaReclamacion: data.fechaReclamacion || undefined,
+          fechaRenuncia: data.fechaRenuncia || undefined,
           conciliacion: data.conciliacion || undefined,
           fechaPresentacionDemanda: data.fechaPresentacionDemanda || undefined,
           clienteNombre: nombreCliente,

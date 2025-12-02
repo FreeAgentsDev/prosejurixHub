@@ -185,6 +185,8 @@ const ProcesoDetalle = () => {
   const view_fechaIngreso = getValue(rawData, 'fecha_ingreso', 'FECHA DE INGRESO', 'fechaIngreso', 'created_at') || proceso?.fechaIngreso;
   const view_fecha = getValue(rawData, 'fecha', 'FECHA', 'fecha_accidente', 'FECHA DE ACCIDENTE') || proceso?.fecha;
   const view_fechaRadicacion = getValue(rawData, 'fecha_radicacion', 'fechaRadicacion', 'Fecha Radicación', 'FECHA_RADICACION') || proceso?.fechaRadicacion;
+  const view_fechaRenuncia = getValue(rawData, 'fecha_renuncia', 'FECHA RENUNCIA', 'FECHA_RENUNCIA', 'fechaRenuncia') || proceso?.fechaRenuncia;
+  const view_fechaReclamacion = getValue(rawData, 'fecha_reclamacion', 'FECHA RECLAMACIÓN', 'FECHA RECLAMACION', 'fechaReclamacion') || proceso?.fechaReclamacion;
   const view_correo = getValue(
     rawData,
     'correo',
@@ -200,6 +202,51 @@ const ProcesoDetalle = () => {
   const view_direccion = getValue(rawData, 'direccion', 'Direccion', 'DIRECCION', 'dirección');
   const view_ciudad = getValue(rawData, 'ciudad', 'Ciudad', 'CIUDAD');
   const view_radicado = getValue(rawData, 'radicado', 'RADICADO', 'Radicado');
+  const view_responsabilidad = getValue(rawData, 'responsabilidad', 'Responsabilidad', 'RESPONSABILIDAD') || proceso?.responsabilidad;
+  const view_aseguradora = getValue(rawData, 'aseguradora', 'ASEGURADORA', 'Aseguradora') || proceso?.aseguradora;
+  const view_caducidad = getValue(rawData, 'caducidad', 'CADUCIDAD') || proceso?.caducidad;
+  const view_fechaAccidente = getValue(rawData, 'fecha_accidente', 'FECHA DE ACCIDENTE', 'FECHA_DE_ACCIDENTE') || proceso?.fechaAccidente || view_fecha;
+
+  // Función para obtener el texto del flujo de proceso
+  const obtenerFlujoProceso = (responsabilidad: string | null | undefined): string => {
+    const responsabilidadLower = String(responsabilidad || '').toLowerCase();
+    
+    if (responsabilidadLower.includes('extracontractual') || responsabilidadLower.includes('extra-contractual')) {
+      return 'Extra-contractual: Hasta 5 años';
+    } else if (responsabilidadLower.includes('contractual')) {
+      return 'Contractual: 2 años';
+    } else if (responsabilidadLower.includes('reparación directa') || responsabilidadLower.includes('reparacion directa')) {
+      return 'Reparación directa: 2 años';
+    }
+    
+    return 'No especificado';
+  };
+
+  // Función para verificar si está cerca de caducar (menos de 6 meses)
+  const estaCercaDeCaducar = (caducidad: string | null | undefined): boolean => {
+    if (!caducidad) return false;
+    const fechaCaducidad = new Date(caducidad);
+    if (Number.isNaN(fechaCaducidad.getTime())) return false;
+    
+    const hoy = new Date();
+    const seisMeses = new Date();
+    seisMeses.setMonth(seisMeses.getMonth() + 6);
+    
+    return fechaCaducidad <= seisMeses && fechaCaducidad >= hoy;
+  };
+
+  // Función para verificar si ya caducó
+  const yaCaduco = (caducidad: string | null | undefined): boolean => {
+    if (!caducidad) return false;
+    const fechaCaducidad = new Date(caducidad);
+    if (Number.isNaN(fechaCaducidad.getTime())) return false;
+    
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fechaCaducidad.setHours(0, 0, 0, 0);
+    
+    return fechaCaducidad < hoy;
+  };
 
   // Normalizador de claves para evitar duplicados por acentos o formatos
   const normalizeKey = (key: string): string => {
@@ -227,19 +274,51 @@ const ProcesoDetalle = () => {
     // Legal
     'demandado','juzgado','placa_vehiculo','placa','radicado','radicado_1',
     // Fechas
-    'fecha','fecha_accidente','fecha_ingreso','created_at','fecha_radicacion',
+    'fecha','fecha_accidente','fecha_ingreso','created_at','fecha_radicacion','fecha_renuncia','fecha_reclamacion',
+    // Responsabilidad y aseguradora
+    'responsabilidad','aseguradora',
   ]);
 
   // UI helpers: chips de color para estado y tipo
   const chipClass =
     'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border';
-  const estadoChipClass = (estado: string | null | undefined) => {
-    const v = String(estado || '').toLowerCase();
-    if (v.includes('final')) return `${chipClass} bg-emerald-50 text-emerald-700 border-emerald-200`;
-    if (v.includes('espera') || v.includes('revision') || v.includes('revisión'))
+  
+  // Función para determinar el color del estado según responsabilidad y estado
+  const estadoChipClass = (
+    estado: string | null | undefined,
+    responsabilidad?: string | null | undefined,
+    aseguradora?: string | null | undefined
+  ) => {
+    const estadoLower = String(estado || '').toLowerCase();
+    const responsabilidadLower = String(responsabilidad || '').toLowerCase();
+    const aseguradoraValue = String(aseguradora || '').trim();
+    const tieneAseguradora = aseguradoraValue && aseguradoraValue.toLowerCase() !== 'n/a' && aseguradoraValue.toLowerCase() !== 'sin aseguradora';
+
+    // Verde → Finalizados
+    if (estadoLower.includes('final') || estadoLower.includes('cerrado') || estadoLower.includes('inactivo')) {
+      return `${chipClass} bg-emerald-50 text-emerald-700 border-emerald-200`;
+    }
+
+    // Rojo → Reparación directa / contractual
+    if (responsabilidadLower.includes('contractual') || responsabilidadLower.includes('reparación directa') || responsabilidadLower.includes('reparacion directa')) {
+      return `${chipClass} bg-red-50 text-red-700 border-red-200`;
+    }
+
+    // Rosado → Extra / aseguradora
+    if (responsabilidadLower.includes('extracontractual') && tieneAseguradora) {
+      return `${chipClass} bg-pink-50 text-pink-700 border-pink-200`;
+    }
+
+    // Cian → Extra / persona natural
+    if (responsabilidadLower.includes('extracontractual') && !tieneAseguradora) {
+      return `${chipClass} bg-cyan-50 text-cyan-700 border-cyan-200`;
+    }
+
+    // Fallback para otros estados
+    if (estadoLower.includes('espera') || estadoLower.includes('revision') || estadoLower.includes('revisión'))
       return `${chipClass} bg-amber-50 text-amber-700 border-amber-200`;
-    if (v.includes('negoci')) return `${chipClass} bg-sky-50 text-sky-700 border-sky-200`;
-    if (v.includes('error') || v.includes('rechaz'))
+    if (estadoLower.includes('negoci')) return `${chipClass} bg-sky-50 text-sky-700 border-sky-200`;
+    if (estadoLower.includes('error') || estadoLower.includes('rechaz'))
       return `${chipClass} bg-rose-50 text-rose-700 border-rose-200`;
     return `${chipClass} bg-indigo-50 text-indigo-700 border-indigo-200`;
   };
@@ -311,6 +390,7 @@ const ProcesoDetalle = () => {
         aseguradora: data.aseguradora,
         actuacion: data.actuacion,
         fechaReclamacion: data.fechaReclamacion,
+        fechaRenuncia: data.fechaRenuncia,
         conciliacion: data.conciliacion,
         fechaPresentacionDemanda: data.fechaPresentacionDemanda,
         radicado1: data.radicado1,
@@ -387,7 +467,7 @@ const ProcesoDetalle = () => {
                     {isEditing ? 'Editando información del proceso' : 'Vista completa del proceso'}
                   </span>
                   {view_tipo && <span className={tipoChipClass(view_tipo)}>{view_tipo}</span>}
-                  {view_estadoPublico && <span className={estadoChipClass(view_estadoPublico)}>{view_estadoPublico}</span>}
+                  {view_estadoPublico && <span className={estadoChipClass(view_estadoPublico, view_responsabilidad, view_aseguradora)}>{view_estadoPublico}</span>}
                 </div>
               </div>
             </div>
@@ -419,7 +499,7 @@ const ProcesoDetalle = () => {
                         <p className="mt-1 text-sm text-blue-100/80">ID Proceso: {String(view_procesoId)}</p>
                       </div>
                       {view_estadoPublico && (
-                        <span className="inline-flex items-center rounded-full bg-white/20 px-4 py-2 text-sm font-semibold text-white backdrop-blur">
+                        <span className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold backdrop-blur ${estadoChipClass(view_estadoPublico, view_responsabilidad, view_aseguradora).replace('border', 'border-2')}`}>
                           {view_estadoPublico}
                         </span>
                       )}
@@ -489,13 +569,13 @@ const ProcesoDetalle = () => {
                           </div>
                           <div>
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Estado Interno</p>
-                            <span className={`mt-2 inline-flex ${estadoChipClass(view_estadoInterno)}`}>
+                            <span className={`mt-2 inline-flex ${estadoChipClass(view_estadoInterno, view_responsabilidad, view_aseguradora)}`}>
                               {view_estadoInterno || 'No especificado'}
                             </span>
                           </div>
                           <div>
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Estado Público</p>
-                            <span className={`mt-2 inline-flex ${estadoChipClass(view_estadoPublico)}`}>
+                            <span className={`mt-2 inline-flex ${estadoChipClass(view_estadoPublico, view_responsabilidad, view_aseguradora)}`}>
                               {view_estadoPublico || 'No especificado'}
                             </span>
                           </div>
@@ -511,6 +591,39 @@ const ProcesoDetalle = () => {
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fecha Radicación</p>
                             <p className="mt-1 text-slate-900">{formatDate(view_fechaRadicacion)}</p>
                           </div>
+                          {view_fechaAccidente && (
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fecha del Accidente</p>
+                              <p className="mt-1 text-slate-900">{formatDate(view_fechaAccidente)}</p>
+                            </div>
+                          )}
+                          {view_caducidad && (
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Caducidad
+                                {view_responsabilidad && (
+                                  <span className="ml-2 text-xs font-normal normal-case text-slate-400">
+                                    ({obtenerFlujoProceso(view_responsabilidad)})
+                                  </span>
+                                )}
+                              </p>
+                              <div className="mt-1 flex items-center gap-2">
+                                <p className={`text-slate-900 ${yaCaduco(view_caducidad) ? 'font-semibold text-red-600' : estaCercaDeCaducar(view_caducidad) ? 'font-semibold text-amber-600' : ''}`}>
+                                  {formatDate(view_caducidad)}
+                                </p>
+                                {yaCaduco(view_caducidad) && (
+                                  <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                                    Caducado
+                                  </span>
+                                )}
+                                {estaCercaDeCaducar(view_caducidad) && !yaCaduco(view_caducidad) && (
+                                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                    Próximo a caducar
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -535,6 +648,20 @@ const ProcesoDetalle = () => {
                             <div>
                               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Radicado</p>
                               <p className="mt-1 break-words text-slate-900">{view_radicado}</p>
+                            </div>
+                          )}
+                          {view_fechaRenuncia && (
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fecha Renuncia Expresa</p>
+                              <p className="mt-1 text-slate-900">{formatDate(view_fechaRenuncia)}</p>
+                              <p className="mt-1 text-xs text-slate-400 italic">Proceso → Renuncia expresa → Reclamación</p>
+                            </div>
+                          )}
+                          {view_fechaReclamacion && (
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fecha Reclamación</p>
+                              <p className="mt-1 text-slate-900">{formatDate(view_fechaReclamacion)}</p>
+                              <p className="mt-1 text-xs text-slate-400 italic">Reclamación → Esperar antes (se necesitan todos los procesos / observaciones)</p>
                             </div>
                           )}
                         </div>
@@ -590,6 +717,65 @@ const ProcesoDetalle = () => {
                         </section>
                       );
                     })()}
+
+                    {/* Sección de información de flujo de proceso */}
+                    <section className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm sm:p-6 mt-6">
+                      <header className="mb-4 flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-semibold text-blue-900">Flujo de Proceso y Reglas de Negocio</h3>
+                          <p className="text-xs text-blue-700">Información importante sobre el manejo de procesos</p>
+                        </div>
+                        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                          Flujo
+                        </span>
+                      </header>
+
+                      <div className="space-y-3 text-xs text-blue-900">
+                        <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                          <p className="font-semibold mb-1">Flujo Principal:</p>
+                          <p className="text-blue-800">Proceso → Renuncia expresa → Reclamación</p>
+                          <p className="text-blue-800 mt-1">Conciliación → Demanda → Juzgados</p>
+                        </div>
+                        
+                        <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                          <p className="font-semibold mb-1">Reclamación:</p>
+                          <p className="text-blue-800">Esperar antes de avanzar (se necesitan todos los procesos / observaciones)</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                            <p className="font-semibold mb-1">Actualizaciones:</p>
+                            <p className="text-blue-800">7 días → semana se actualizan todos</p>
+                          </div>
+                          
+                          <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                            <p className="font-semibold mb-1">Préstamos:</p>
+                            <p className="text-blue-800">7 préstamos → flujo / ventaja</p>
+                          </div>
+                          
+                          <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                            <p className="font-semibold mb-1">Radicados:</p>
+                            <p className="text-blue-800">7 radicados → Juzgados → Correos</p>
+                          </div>
+                          
+                          <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                            <p className="font-semibold mb-1">Nota:</p>
+                            <p className="text-blue-800">100–120 (no a todos)</p>
+                          </div>
+                        </div>
+
+                        <div className="rounded-lg border border-blue-200 bg-white/80 p-3">
+                          <p className="font-semibold mb-1">Información Requerida:</p>
+                          <p className="text-blue-800">Fecha de renuncia + Aseguradora</p>
+                          {view_fechaRenuncia && view_aseguradora && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-xs text-blue-600">✓ Renuncia: {formatDate(view_fechaRenuncia)}</span>
+                              <span className="text-xs text-blue-600">✓ Aseguradora: {view_aseguradora}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </section>
                   </div>
                 </section>
               </div>
@@ -644,6 +830,7 @@ const ProcesoDetalle = () => {
                       aseguradora: getValue(rawData, 'aseguradora', 'ASEGURADORA') || proceso.aseguradora || '',
                       actuacion: getValue(rawData, 'actuacion', 'ACTUACIÓN', 'ACTUACION') || proceso.actuacion || '',
                       fechaReclamacion: getValue(rawData, 'fecha_reclamacion', 'FECHA RECLAMACIÓN', 'FECHA RECLAMACION') || proceso.fechaReclamacion || '',
+                      fechaRenuncia: getValue(rawData, 'fecha_renuncia', 'FECHA RENUNCIA', 'FECHA_RENUNCIA', 'fechaRenuncia') || proceso.fechaRenuncia || '',
                       conciliacion: getValue(rawData, 'conciliacion', 'CONCILIACIÓN', 'CONCILIACION') || proceso.conciliacion || '',
                       fechaPresentacionDemanda: getValue(rawData, 'fecha_presentacion_demanda', 'FECHA PRESENTACIÓN DEMANDA', 'FECHA PRESENTACION DEMANDA') || proceso.fechaPresentacionDemanda || '',
                       radicado1: getValue(rawData, 'radicado_1', 'RADICADO_1') || proceso.radicado1 || '',
