@@ -33,16 +33,13 @@ const AdminLogin = () => {
     const adminUser = import.meta.env.VITE_ADMIN_USER || 'admin';
     const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
     
-    // Si no hay contraseña configurada, usar la por defecto (solo para desarrollo)
-    const expectedPassword = adminPassword || (import.meta.env.DEV ? 'prosejurix2024' : '');
+    // Usar contraseña de entorno o fallback a la por defecto
+    // En producción, si no hay variables de entorno, usar las credenciales por defecto
+    const expectedPassword = adminPassword || 'prosejurix2024';
     
-    if (!expectedPassword) {
-      notify({
-        type: 'error',
-        title: 'Error de configuración',
-        message: 'Las credenciales de administrador no están configuradas.'
-      });
-      return;
+    // Advertencia en consola si se están usando credenciales por defecto en producción
+    if (!adminPassword && import.meta.env.PROD) {
+      console.warn('⚠️ ADVERTENCIA DE SEGURIDAD: Se están usando credenciales por defecto. Configura VITE_ADMIN_PASSWORD en las variables de entorno de producción.');
     }
     
     if (usuario !== adminUser || password !== expectedPassword) {
